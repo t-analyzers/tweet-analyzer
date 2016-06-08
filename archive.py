@@ -6,6 +6,7 @@ from tweepy.parsers import JSONParser
 import config
 import date_utilities
 from logger import Logger
+import send_mail
 
 # coding: UTF-8
 # write code...
@@ -45,6 +46,7 @@ def create_twitter_client() -> API:
     return twitter_api
 
 
+@send_mail("(送信先アドレス")
 def archive(query_string):
     """
     Twitter APIを用いてつぶやきを検索し、MongoDBに保存する。
