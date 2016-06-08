@@ -154,6 +154,6 @@ def create_excel_workbook(excel_file_path, start_time, end_time):
 
 
 if __name__ == '__main__':
-    now = datetime.now()
+    now = datetime.today()
     file_path = 'data/Twitter分析_{0}.xlsx'.format(date_utilities.datetime.now().strftime('%Y%m%d'))
     create_excel_workbook(file_path, now - timedelta(days=7), now)
