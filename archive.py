@@ -46,7 +46,7 @@ def create_twitter_client() -> API:
     return twitter_api
 
 
-@send_mail("(送信先アドレス")
+#@send_mail("(送信先アドレス")
 def archive(query_string):
     """
     Twitter APIを用いてつぶやきを検索し、MongoDBに保存する。
@@ -111,12 +111,11 @@ def add_jp_datetime_info():
     すでにセット済の場合は、なにもしない。
     :return: なし
     """
-    print("Adding Datetime info")
     logger.info("Adding Datetime info")
     [tweet_collection.update({"_id": tweet["_id"]},
                              {"$set": {"created_datetime": date_utilities.str_to_date_jp(tweet["created_at"])}})
      for tweet in tweet_collection.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
-
+    print("Adding Datetime info")
 
 if __name__ == '__main__':
     archive(get_query_string())
