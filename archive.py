@@ -6,15 +6,14 @@ from tweepy.parsers import JSONParser
 import config
 import date_utilities
 from logger import Logger
+import db
 import send_mail
 
 # coding: UTF-8
 # write code...
 
 logger = Logger("archive")
-
-client = pymongo.MongoClient(config.HOST, config.PORT)
-tweet_collection = client[config.DB_NAME][config.COLLECTION_NAME]
+tweet_collection = db.connect_tweet_collection()
 
 
 def get_query_string() -> str:

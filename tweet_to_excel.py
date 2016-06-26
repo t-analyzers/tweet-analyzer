@@ -1,8 +1,7 @@
 from collections import defaultdict
 import pandas as pd
 from pandas import DataFrame, Series
-import config
-import pymongo
+import db
 import date_utilities
 from logger import Logger
 import yaml
@@ -12,8 +11,7 @@ from _datetime import *
 # write code...
 
 logger = Logger('excel')
-client = pymongo.MongoClient(config.HOST, config.PORT)
-tweet_collection = client[config.DB_NAME][config.COLLECTION_NAME]
+tweet_collection = db.connect_tweet_collection()
 
 
 def get_time_series_data(condition, date_format) -> DataFrame:
