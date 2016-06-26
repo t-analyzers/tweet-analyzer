@@ -24,6 +24,7 @@ def get_query_string() -> str:
     """
     with open("search_keywords.yml", "r", encoding="utf-8") as file:
         keywords = yaml.load(file)
+    # 検索キーワードに半角スペースが含まれている（OR条件あり）の場合、括弧で囲む。
     return " OR ".join(["(" + keyword + ")" if " " in keyword else keyword for keyword in keywords])
 
 
