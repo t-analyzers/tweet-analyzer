@@ -24,7 +24,7 @@ def get_query_string() -> str:
     """
     with open("search_keywords.yml", "r", encoding="utf-8") as file:
         keywords = yaml.load(file)
-    return " OR ".join(keywords)
+    return " OR ".join(["(" + keyword + ")" if " " in keyword else keyword for keyword in keywords])
 
 
 def create_twitter_client() -> API:
