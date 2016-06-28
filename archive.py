@@ -72,13 +72,14 @@ def archive(query_string):
                 "count": 100,
                 "lang": "ja",
                 "result_type": "recent"
-                #"proxy": "The full url to an HTTPS proxy to use for connecting to Twitter."
             }
             # max_idとsince_idは設定されている場合のみ、パラメータとして渡すようにする。
             if max_id > 0:
                 params["max_id"] = str(max_id - 1)
             if since_id is not None:
                 params["since_id"] = since_id
+            if config.PROXY:
+                params["proxy"] = config.PROXY
 
             search_result = twitter_client.search(**params)
             statuses = search_result["statuses"]

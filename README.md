@@ -27,6 +27,9 @@ config.pyの下記項目に各自の値を設定する。
 * ACCESS_TOKEN_KEY
 * ACCESS_TOKEN_SECRET
 
+プロキシ環境下では下記項目に設定が必要。
+* PROXY
+
 #### MongoDB
 TwitterAPIで取得したつぶやき（JSON）をMongoDBに格納します。  
 MongoDBをインストールして起動しておく。  

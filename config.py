@@ -12,3 +12,6 @@ CONSUMER_KEY = ""
 CONSUMER_SECRET = ""
 ACCESS_TOKEN_KEY = ""
 ACCESS_TOKEN_SECRET = ""
+
+# The full url to an HTTPS proxy to use for connecting to Twitter.
+PROXY = ""
