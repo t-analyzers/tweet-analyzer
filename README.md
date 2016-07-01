@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ```
 
 #### 作業用ディレクトリについて
-dataディレクトリ以下にExcelを出力します。    
+excelディレクトリ以下にExcelを出力します。    
 logsディレクトリ以下にログ出力します。  
 
 #### Twitter API
