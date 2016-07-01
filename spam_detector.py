@@ -1,13 +1,13 @@
-from collections import defaultdict
-from date_utilities import *
-import db
 import re
-from logger import Logger
+from collections import defaultdict
+import db
+from date_ext import *
+from logger import Log
 
 # coding=utf-8
 # write code...
 
-logger = Logger("spam_detector")
+log = Log("spam_detector")
 tweet_collection = db.connect_tweet_collection()
 
 
@@ -49,7 +49,7 @@ def detect_spam_user(from_date, to_date):
         result = select_outlier_retweet_num_per_hour(d, limit=60)
         if len(result) > 0:
             [user_name_set.add(key) for key in result.keys()]
-            logger.info('detect spam {0} {1}'.format(d, result))
+            log.info('detect spam {0} {1}'.format(d, result))
             print(d, result)
 
     return user_name_set
@@ -64,7 +64,7 @@ def divide_spam_tweet(spam_users):
         try:
             retweeted_name = tweet['entities']['user_mentions'][0]['screen_name']
         except Exception as e:
-            logger.info('handle {0}'.format(type(e)))
+            log.info('handle {0}'.format(type(e)))
             count += 1
             pattern = r".*@([0-9a-zA-Z_]*).*"
             ite = re.finditer(pattern, tweet['text'])
@@ -80,7 +80,7 @@ def divide_spam_tweet(spam_users):
             spam_twitter.add(tweet['user']['screen_name'])
 
     msg = '{0}件のリツイートをスパムに分類しました'.format(count)
-    logger.info(msg)
+    log.info(msg)
     print(msg)
 
     # ブラックリスト入りのユーザーのツイートをスパムに分類
@@ -91,7 +91,7 @@ def divide_spam_tweet(spam_users):
             count += 1
             tweet_collection.update({'_id': tweet['_id']}, {'$set': {'spam': True}})
     msg = '{0}件のツイートをスパムに分類しました'.format(count)
-    logger.info(msg)
+    log.info(msg)
     print(msg)
 
 

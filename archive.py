@@ -1,18 +1,17 @@
 import sys
-import yaml
 import pymongo
+import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
 import config
-import date_utilities
-from logger import Logger
+import date_ext
 import db
-import send_mail
+from logger import Log
 
 # coding: UTF-8
 # write code...
 
-logger = Logger("archive")
+log = Log("archive")
 tweet_collection = db.connect_tweet_collection()
 
 
@@ -21,7 +20,7 @@ def get_query_string() -> str:
     YAMLファイルから検索キーワードのリストを取得し、Twitter検索用にOR連結した文字列を返す
     :return: Twitter検索キーワード
     """
-    with open("search_keywords.yml", "r", encoding="utf-8") as file:
+    with open("conf/search_keywords.yml", "r", encoding="utf-8") as file:
         keywords = yaml.load(file)
     # 検索キーワードに半角スペースが含まれている（OR条件あり）の場合、括弧で囲む。
     return " OR ".join(["(" + keyword + ")" if " " in keyword else keyword for keyword in keywords])
@@ -40,7 +39,7 @@ def create_twitter_client() -> API:
     twitter_api = API(auth, parser=JSONParser(), wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
     if twitter_api is None:
-        logger.error("Can't Authenticate")
+        log.error("Can't Authenticate")
         sys.exit(-1)
 
     return twitter_api
@@ -64,7 +63,7 @@ def archive(query_string):
 
     tweet_count = 0
 
-    logger.info("Downloading tweets")
+    log.info("Downloading tweets")
     while True:
         try:
             params = {
@@ -87,15 +86,15 @@ def archive(query_string):
             # 最後まで検索できたかチェック
             if statuses is None or len(statuses) == 0:
                 print("No more tweets found")
-                logger.info("No more tweets found")
+                log.info("No more tweets found")
                 break
 
             tweet_count += len(statuses)
             print("Downloaded {0} tweets".format(tweet_count))
-            logger.debug("Downloaded {0} tweets".format(tweet_count))
+            log.debug("Downloaded {0} tweets".format(tweet_count))
 
             result = tweet_collection.insert_many([status for status in statuses])
-            logger.debug("Result of insert into mongodb = {0}".format(result))
+            log.debug("Result of insert into mongodb = {0}".format(result))
 
             # 最後に取得したTweetのIDで更新する。
             max_id = statuses[-1]["id"]
@@ -112,9 +111,9 @@ def add_jp_datetime_info():
     すでにセット済の場合は、なにもしない。
     :return: なし
     """
-    logger.info("Adding Datetime info")
+    log.info("Adding Datetime info")
     [tweet_collection.update({"_id": tweet["_id"]},
-                             {"$set": {"created_datetime": date_utilities.str_to_date_jp(tweet["created_at"])}})
+                             {"$set": {"created_datetime": date_ext.str_to_date_jp(tweet["created_at"])}})
      for tweet in tweet_collection.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
     print("Adding Datetime info")
 

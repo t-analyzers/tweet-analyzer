@@ -5,7 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 # write code...
 
 
-class Logger:
+class Log:
     def __init__(self, log_type):
         # ロガーオブジェクトの作成
         logger = logging.getLogger(log_type)
