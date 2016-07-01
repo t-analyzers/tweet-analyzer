@@ -19,7 +19,7 @@ pip install -r requirements.txt
 dataディレクトリ以下にExcelを出力します。    
 logsディレクトリ以下にログ出力します。  
 
-#### TwitterAPI
+#### Twitter API
 TwitterAPIが必要なので、取得する。  
 config.pyの下記項目に各自の値を設定する。    
 * CONSUMER_KEY
@@ -58,3 +58,11 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 #### send_mail.py
 メール送信するスクリプト。  
 まだ使ってないです。  
+
+### Jupyter Notebook
+Anacondaを使っていればインストール済です。  
+下記コマンドを実行すると起動します。  
+その後、Twitter-Analysis.ipynbを開いてください。  
+```
+jupyter notebook
+```
