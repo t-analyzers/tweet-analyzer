@@ -101,7 +101,7 @@ def archive(query_string):
 
         except (TypeError, TweepError) as e:
             print(str(e))
-            logger.exception(str(e))
+            log.exception(str(e))
             break
 
 
