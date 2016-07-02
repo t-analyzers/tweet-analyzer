@@ -1,6 +1,6 @@
 import pymongo
 
-import analyzer.config as config
+import config as config
 
 # coding=utf-8
 # write code...

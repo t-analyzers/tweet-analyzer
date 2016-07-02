@@ -3,8 +3,8 @@ from collections import defaultdict
 import pandas as pd
 from pandas import DataFrame, Series
 
-from analyzer.date_ext import *
-from analyzer.db import *
+from date_ext import *
+from db import *
 
 
 # coding=utf-8

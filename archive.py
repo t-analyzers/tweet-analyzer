@@ -2,9 +2,9 @@ import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
 
-from analyzer.date_ext import *
-from analyzer.db import *
-from analyzer.logger import Log
+from date_ext import *
+from db import *
+from logger import Log
 
 # coding=utf-8
 # write code...
