@@ -1,8 +1,14 @@
 from collections import defaultdict
+
 import pandas as pd
 from pandas import DataFrame, Series
-import date_ext
-import db
+
+from analyzer.date_ext import *
+from analyzer.db import *
+
+
+# coding=utf-8
+# write code...
 
 
 def get_time_series_data(condition, date_format) -> DataFrame:
@@ -12,7 +18,7 @@ def get_time_series_data(condition, date_format) -> DataFrame:
     :param date_format: 日付フォーマット、指定されたフォーマットごとにつぶやき数を計算する
     :return: DataFrame
     """
-    tweet_collection = db.connect_tweet_collection()
+    tweet_collection = connect_tweet_collection()
 
     all_date_dict = defaultdict(int)
     ret_date_dict = defaultdict(int)
@@ -23,7 +29,7 @@ def get_time_series_data(condition, date_format) -> DataFrame:
     not_spam_ret_dict = defaultdict(int)
 
     for tweet in tweet_collection.find(condition, {'_id': 1, 'created_datetime': 1, 'retweeted_status': 1, 'spam': 1}):
-        str_date = date_ext.date_to_japan_time(tweet['created_datetime']).strftime(date_format)
+        str_date = date_to_japan_time(tweet['created_datetime']).strftime(date_format)
         all_date_dict[str_date] += 1
 
         # spamの除去

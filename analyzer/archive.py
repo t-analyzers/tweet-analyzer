@@ -1,18 +1,16 @@
-import sys
-import pymongo
 import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
-import config
-import date_ext
-import db
-from logger import Log
 
-# coding: UTF-8
+from analyzer.date_ext import *
+from analyzer.db import *
+from analyzer.logger import Log
+
+# coding=utf-8
 # write code...
 
 log = Log("archive")
-tweet_collection = db.connect_tweet_collection()
+tweet_collection = connect_tweet_collection()
 
 
 def get_query_string() -> str:
@@ -113,7 +111,7 @@ def add_jp_datetime_info():
     """
     log.info("Adding Datetime info")
     [tweet_collection.update({"_id": tweet["_id"]},
-                             {"$set": {"created_datetime": date_ext.str_to_date_jp(tweet["created_at"])}})
+                             {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
      for tweet in tweet_collection.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
     print("Adding Datetime info")
 

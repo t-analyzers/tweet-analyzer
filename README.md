@@ -62,7 +62,7 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  
 下記コマンドを実行すると起動します。  
-その後、Twitter-Analysis.ipynbを開いてください。  
+その後、twitter-analysis.ipynbを開いてください。  
 ```
 jupyter notebook
 ```

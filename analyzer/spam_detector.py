@@ -1,14 +1,15 @@
 import re
 from collections import defaultdict
-import db
-from date_ext import *
-from logger import Log
+
+from analyzer.date_ext import *
+from analyzer.db import *
+from analyzer.logger import Log
 
 # coding=utf-8
 # write code...
 
 log = Log("spam_detector")
-tweet_collection = db.connect_tweet_collection()
+tweet_collection = connect_tweet_collection()
 
 
 def select_outlier_retweet_num_per_hour(from_str_datetime_jp, limit=120):

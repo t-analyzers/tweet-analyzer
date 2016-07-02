@@ -12,7 +12,7 @@ class Log:
         # ログレベルの設定
         logger.setLevel(logging.DEBUG)
         # ハンドラの設定
-        handler = TimedRotatingFileHandler(filename="./logs/tweet-analyzer.log", when="D", backupCount=30)
+        handler = TimedRotatingFileHandler(filename="logs/tweet-analyzer.log", when="D", backupCount=30)
         # ログフォーマットの設定
         formatter = logging.Formatter("[%(asctime)s] %(name)s %(levelname)s %(message)s")
         handler.setFormatter(formatter)
