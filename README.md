@@ -16,8 +16,10 @@ pip install -r requirements.txt
 ```
 
 #### 作業用ディレクトリについて
-excelディレクトリ以下にExcelを出力します。    
-logsディレクトリ以下にログ出力します。  
+analyzer以下にソースコードがあります。  
+analyzer/conf以下に検索用キーワードを定義した設定ファイルがあります。  
+analyzer/excel以下にExcelを出力します。    
+analyzer/logs以下にログ出力します。  
 
 #### Twitter API
 TwitterAPIが必要なので、取得する。  
@@ -31,7 +33,7 @@ config.pyの下記項目に各自の値を設定する。
 * PROXY
 
 #### MongoDB
-TwitterAPIで取得したつぶやき（JSON）をMongoDBに格納します。  
+Twitter APIで取得したつぶやき（JSON）をMongoDBに格納します。  
 MongoDBをインストールして起動しておく。  
 ホスト名やポート番号は、config.pyで設定しているので必要に応じて変更する。  
 
@@ -62,7 +64,7 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  
 下記コマンドを実行すると起動します。  
-その後、twitter-analysis.ipynbを開いてください。  
+起動後、twitter_analysis.ipynbを開いてください。  
 ```
 jupyter notebook
 ```
