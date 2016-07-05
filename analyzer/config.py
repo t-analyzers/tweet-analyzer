@@ -15,3 +15,7 @@ ACCESS_TOKEN_SECRET = ""
 
 # The full url to an HTTPS proxy to use for connecting to Twitter.
 PROXY = ""
+
+# E-mail
+MAIL_FROM = ""
+MAIL_TO = ""

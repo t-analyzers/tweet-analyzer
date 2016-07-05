@@ -56,7 +56,7 @@ docs/_build/
 
 # PyBuilder
 target/
-/.ipynb_checkpoints
+analyzer/.ipynb_checkpoints
 /.idea
 
 *.xlsx

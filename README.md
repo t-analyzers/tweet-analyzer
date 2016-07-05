@@ -16,14 +16,13 @@ pip install -r requirements.txt
 ```
 
 #### 作業用ディレクトリについて
-analyzer以下にソースコードがあります。  
-analyzer/conf以下に検索用キーワードを定義した設定ファイルがあります。  
-analyzer/excel以下にExcelを出力します。    
-analyzer/logs以下にログ出力します。  
+analyzer以下にソースコードがあります。   
+out以下にExcelを出力します。  
+logs以下にログ出力します。  
 
 #### Twitter API
 TwitterAPIが必要なので、取得する。  
-config.pyの下記項目に各自の値を設定する。    
+analyzer/config.pyの下記項目に各自の値を設定する。    
 * CONSUMER_KEY
 * CONSUMER_SECRET
 * ACCESS_TOKEN_KEY
@@ -37,10 +36,25 @@ Twitter APIで取得したつぶやき（JSON）をMongoDBに格納します。
 MongoDBをインストールして起動しておく。  
 ホスト名やポート番号は、config.pyで設定しているので必要に応じて変更する。  
 
-### スクリプトについて
-「python "スクリプト名"」で実行できます。  
+### 実行方法
+command.pyが実行用のスクリプトになっています。  
+引数にコマンド名を指定すると処理が開始されます。  
 
-#### archive.py
+Twitter APIを使用してつぶやきを保存する場合：
+```
+cd analyzer
+python command.py archive
+```
+
+Excel形式のレポートを出力する場合：
+```
+cd analyzer
+python command.py excel
+```
+
+### 各スクリプトについて
+
+#### archiver.py
 search_keywords.ymlに記載されたキーワードのリストをOR連結し、検索キーワードとして使用します。  
 新しいつぶやきから順に検索結果が得られなくなるまで検索を繰り返します。  
 おそらく過去1週間程度まで取得可能です。（詳細は、TwitterAPIを参照）  
@@ -49,17 +63,16 @@ search_keywords.ymlに記載されたキーワードのリストをOR連結し�
 検索完了後、created_datetimeキーにUTCから日本時間に変換した値をセットしています。  
 
 #### spam_detector.py 
-1時間以内に120回以上リツイートされているものはスパム判定しています。  
+1時間以内に60回以上リツイートされているものはスパム判定しています。  
 該当する場合、DBに対して更新（{'spam': True}をセット）をかけます。 
 
-#### tweet_to_excel.py
+#### simple_analyzer.py
+簡単な集計を行い、DataFrameを生成します。
+
+#### report_creator.py
 DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下にExcel出力します。  
 時間ごと、日ごと、時間帯別のつぶやき数を集計します。  
 などなど。  
-
-#### send_mail.py
-メール送信するスクリプト。  
-まだ使ってないです。  
 
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  

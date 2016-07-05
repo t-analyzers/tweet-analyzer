@@ -1,3 +1,4 @@
+click
 pytz
 pandas
 PyYAML==3.11

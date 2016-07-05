@@ -5,15 +5,13 @@ from email.mime.text import MIMEText
 # write code...
 
 
-def send_mail(to_address):
+def send_mail(from_address, to_address):
     def receive_func(func):
         import functools
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-
-            from_address = "(送信元アドレスを設定)"
 
             # Create mail
             text = "Process \"{0}\" is finished!!\n".format(func.__name__)
