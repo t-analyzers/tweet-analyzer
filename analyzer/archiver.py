@@ -118,6 +118,6 @@ class TweetArchiver(object):
         """
         self.__log.info("Adding Datetime info")
         [self.__tweets.update({"_id": tweet["_id"]},
-                            {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
+                              {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
          for tweet in self.__tweets.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
         print("Adding Datetime info")
