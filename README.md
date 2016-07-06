@@ -40,16 +40,16 @@ MongoDBをインストールして起動しておく。
 command.pyが実行用のスクリプトになっています。  
 引数にコマンド名を指定すると処理が開始されます。  
 
-Twitter APIを使用してつぶやきを保存する場合：
+Twitter APIを使用してつぶやきを保存する場合：  
 ```
-cd analyzer
-python command.py archive
+cd analyzer  
+python command.py a  
 ```
 
-Excel形式のレポートを出力する場合：
+Excel形式のレポートを出力する場合：  
 ```
-cd analyzer
-python command.py excel
+cd analyzer  
+python command.py e  
 ```
 
 ### 各スクリプトについて
