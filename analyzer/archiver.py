@@ -67,7 +67,7 @@ class TweetArchiver(object):
                 print("Downloaded {0} tweets".format(tweet_count))
                 self.__log.debug("Downloaded {0} tweets".format(tweet_count))
 
-                result = self.__tweets.insert_many([status for status in statuses])
+                result = self.__tweets.insert_many(statuses)
                 self.__log.debug("Result of insert into mongodb = {0}".format(result))
 
                 # 最後に取得したTweetのIDで更新する。
