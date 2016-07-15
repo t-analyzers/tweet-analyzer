@@ -16,6 +16,10 @@ ACCESS_TOKEN_SECRET = ""
 # The full url to an HTTPS proxy to use for connecting to Twitter.
 PROXY = ""
 
+# MECAB
+# example: /usr/local/Cellar/mecab/0.996/lib/mecab/dic/mecab-ipadic-neologd
+MECAB_SYS_DICT = ""
+
 # E-mail
 MAIL_FROM = ""
 MAIL_TO = ""

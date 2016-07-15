@@ -6,6 +6,7 @@ import click
 from archiver import TweetArchiver
 from report_creator import ReportCreator
 from spam_detector import SpamDetector
+from negaposi import MecabEvaluator
 
 
 # coding=utf-8
@@ -25,9 +26,13 @@ def archive_tweets():
     print('スパムツィートを検索します。')
     today = datetime.today()
     tomorrow = today + timedelta(days=1)
-    # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな範囲で検索する。
+    # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな14日間の範囲で検索する。
     two_weeks_ago = tomorrow - timedelta(days=14)
     SpamDetector().divide_spam_tweet(two_weeks_ago, tomorrow, 60)
+
+    print("ネガポジスコアの算出開始")
+    MecabEvaluator().set_negaposi_score(two_weeks_ago, tomorrow)
+    print("ネガポジスコアの算出完了")
 
 
 @cmd.command('e', short_help=': create the excel format of the report.')
