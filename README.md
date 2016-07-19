@@ -90,6 +90,27 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 ### svn_scorer.py
 サポートベクターマシンを使ってネガポジ判定を行います。
 
+### feature_words_extractor.py
+archive.pyで取り込んだツイートをMeCabを使って形態素解析を行い名詞を抽出し、TF-IDFモデルで日別の特徴語を抽出します。
+抽出結果はJSON形式で以下のようにファイルに出力します。
+
+* 特徴語データ:
+feature_words_YYYYMMDD-YYYYMMDD.json:[{"date": , "tweet_count":, "retweet_count":,"feature_words":[...]},...] ※dateでソート
+* 日別ツイートデータ:
+tweets_YYYYMMDD.json:  [{'created_datetime': ,'retweet_count': , 'id': , user.screen_name': , 'text':, 'media_urls':, 'nouns': ,'PrintID' }, ...] ※created_datetimeでソート
+
+解析する日数、抽出する特徴語の数、ファイル出力先フォルダはconfig_feature_words.pyで指定できます。
+また、本プログラムでは以下のライブラリを使用します。（Anacondaをインストールするとこれらのライブラリはインストール済みのようです。）
+
+* mecab-python3: MeCab自身のインストール方法は　[Python で Mecabを利用する【mac】](http://inner2.hatenablog.com/entry/2015/01/08/230447 "Python で Mecabを利用する【mac】")を参照のこと。(macですが)
+* scikit-learn
+* scipy
+* numpy
+
+上記だけで動作しない場合はopenblasも必要かもしれません。Anacondaの「Enviroments」からインストールしてください。
+
+なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。 
+
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  
 下記コマンドを実行すると起動します。  

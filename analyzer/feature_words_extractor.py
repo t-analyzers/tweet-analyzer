@@ -6,9 +6,9 @@ archve.pyで取り込んだtweetsを分析する。
   XXはconfig_feature_words.pyで設定可能。
  
  出力ファイル：
-   - tweets_YYYYMMDD.json x 指定期間日数
-       [{"date": , "tweet_count":, "retweet_count":,"feature_words":[...]},...] ※dateでソート
    - feature_words_YYYYMMDD-YYYYMMDD.json
+       [{"date": , "tweet_count":, "retweet_count":,"feature_words":[...]},...] ※dateでソート
+   - tweets_YYYYMMDD.json x 指定期間日数
        [{'created_datetime': ,'retweet_count': , 'id': , user.screen_name': , 'text':, 'media_urls':, 'nouns': ,'PrintID' }, ...] ※created_datetimeでソート
 @author: hitoshi
 """
