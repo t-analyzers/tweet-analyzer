@@ -6,8 +6,7 @@ This is a test repository for twitter analysis.
 #### Python3
 Python3.5をインストールする。  
 pandasを使っているのと機械学習系のライブラリを使ってみたい場合は、  
-Anacondaをインストールすると主要なライブラリをまとめてインストールできるのでおすすめ。  
-https://www.continuum.io/downloads
+[Anaconda](https://www.continuum.io/downloads)をインストールすると主要なライブラリをまとめてインストールできるのでおすすめ。  
 
 その他必要なライブラリは、requirements.txtに記載。  
 Pythonをインストール後、下記コマンドを実行すればまとめてインストールできます。  
@@ -22,7 +21,7 @@ logs以下にログ出力します。
 
 #### Twitter API
 TwitterAPIが必要なので、取得する。  
-analyzer/config.pyの下記項目に各自の値を設定する。    
+analyzer/conf/config.pyの下記項目に各自の値を設定する。    
 * CONSUMER_KEY
 * CONSUMER_SECRET
 * ACCESS_TOKEN_KEY
@@ -35,6 +34,14 @@ analyzer/config.pyの下記項目に各自の値を設定する。
 Twitter APIで取得したつぶやき（JSON）をMongoDBに格納します。  
 MongoDBをインストールして起動しておく。  
 ホスト名やポート番号は、config.pyで設定しているので必要に応じて変更する。  
+
+#### Mecabのユーザ辞書
+※本項目はオプションです。実施しなくてもスクリプトは動作します。  
+一部のスクリプトで形態素解析を行っていますが、  
+精度を向上させるためにユーザ辞書を追加でインストールしてください。  
+インストール方法は、[mecab-ipadic-neologd](https://github.com/neologd/mecab-ipadic-neologd/blob/master/README.ja.md)を参照してください。  
+インストール後、analyzer/conf/config.pyの下記項目にインストールパスを設定してください。  
+* MECAB_USER_DICT
 
 ### 実行方法
 command.pyが実行用のスクリプトになっています。  
@@ -66,17 +73,22 @@ search_keywords.ymlに記載されたキーワードのリストをOR連結し�
 1時間以内に60回以上リツイートされているものはスパム判定しています。  
 該当する場合、DBに対して更新（{'spam': True}をセット）をかけます。 
 
-#### simple_analyzer.py
+#### sample_analyzer.py
 簡単な集計を行い、DataFrameを生成します。
+
+#### tweet_counter.py
+時間帯別のつぶやき数を集計し、DataFrameを生成します。
 
 #### report_creator.py
 DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下にExcel出力します。  
 時間ごと、日ごと、時間帯別のつぶやき数を集計します。  
 などなど。  
 
-### negaposi.py
+### pn_dict_scorer.py
 現状は、単語感情極性対応を用いて文章（つぶやき）の極性値をネガポジスコアとして算出します。  
-ネガティブに偏りがちなので、別の手法も実装予定です。  
+
+### svn_scorer.py
+サポートベクターマシンを使ってネガポジ判定を行います。
 
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  

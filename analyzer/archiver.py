@@ -2,42 +2,50 @@ import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
 
+import config as config
+from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
-from shared.mongo_wrapper import *
-from shared.log import Log
-# from shared.mail import *
+from shared.decorators import trace
+
 
 # coding=utf-8
 # write code...
 
 
-class TweetArchiver(object):
+class TweetArchiver(BaseAnalyzer):
     """
     つぶやきをMongoDBに保存するクラス
     """
-    def __init__(self):
-        self.__log = Log("archive")
-        self.__tweets = MongoWrapper.connect_tweets()
 
-    # @send_mail(config.MAIL_FROM, config.MAIL_TO)
+    def __init__(self):
+        super().__init__()
+
+    @trace()
     def archive(self):
+        """
+        DBにつぶやきを保存し、UTCから日本時間を算出し、セットする。
+        :return: なし
+        """
+        self._insert_tweets()
+        self._add_jp_datetime_info()
+
+    def _insert_tweets(self):
         """
         Twitter APIを用いてつぶやきを検索し、MongoDBに保存する。
         :return: なし
         """
-        twitter_client = self.__create_twitter_client()
+        twitter_client = self._create_twitter_client()
 
         # 取得済のつぶやきの中から最新のつぶやきを取得し、そのつぶやきのid以降を取得するように設定しておく。
-        last_tweet = self.__tweets.find_one(sort=[["id", pymongo.DESCENDING]])
-        since_id = None if last_tweet is None else last_tweet["id"]
+        since_id = None if self.last_tweet is None else self.last_tweet["id"]
 
         # 初回の検索時は、max_idの設定をしないように-1を設定しておく。
         max_id = -1
         tweet_count = 0
 
-        query_string = self.__get_query_string()
+        query_string = self._get_query_string()
 
-        self.__log.info("Downloading tweets")
+        self.log.info("Downloading tweets")
         while True:
             try:
                 params = {
@@ -60,29 +68,26 @@ class TweetArchiver(object):
                 # 最後まで検索できたかチェック
                 if statuses is None or len(statuses) == 0:
                     print("No more tweets found")
-                    self.__log.info("No more tweets found")
+                    self.log.info("No more tweets found")
                     break
 
                 tweet_count += len(statuses)
                 print("Downloaded {0} tweets".format(tweet_count))
-                self.__log.debug("Downloaded {0} tweets".format(tweet_count))
+                self.log.debug("Downloaded {0} tweets".format(tweet_count))
 
-                result = self.__tweets.insert_many(statuses)
-                self.__log.debug("Result of insert into mongodb = {0}".format(result))
+                result = self.tweets.insert_many(statuses)
+                self.log.debug("Result of insert into mongodb = {0}".format(result))
 
                 # 最後に取得したTweetのIDで更新する。
                 max_id = statuses[-1]["id"]
 
             except (TypeError, TweepError) as e:
                 print(str(e))
-                self.__log.exception(str(e))
+                self.log.exception(str(e))
                 break
 
-        # 保存が完了したら、日本時間をセットしておく。
-        self.__add_jp_datetime_info()
-
     @staticmethod
-    def __get_query_string() -> str:
+    def _get_query_string() -> str:
         """
         YAMLファイルから検索キーワードのリストを取得し、Twitter検索用にOR連結した文字列を返す
         :return: Twitter検索キーワード
@@ -92,7 +97,7 @@ class TweetArchiver(object):
         # 検索キーワードに半角スペースが含まれている（OR条件あり）の場合、括弧で囲む。
         return " OR ".join(["(" + keyword + ")" if " " in keyword else keyword for keyword in keywords])
 
-    def __create_twitter_client(self) -> API:
+    def _create_twitter_client(self) -> API:
         """
         tweepyのAPIを生成する
         :return: API
@@ -105,19 +110,18 @@ class TweetArchiver(object):
         twitter_api = API(auth, parser=JSONParser(), wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
         if twitter_api is None:
-            self.__log.error("Can't Authenticate")
+            self.log.error("Can't Authenticate")
             sys.exit(-1)
 
         return twitter_api
 
-    def __add_jp_datetime_info(self):
+    def _add_jp_datetime_info(self):
         """
         Twitter APIで取得したつぶやきはUTC時刻となっているため、日本時間に変換した値もセットしておく。
         すでにセット済の場合は、なにもしない。
         :return: なし
         """
-        self.__log.info("Adding Datetime info")
-        [self.__tweets.update({"_id": tweet["_id"]},
-                              {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
-         for tweet in self.__tweets.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
-        print("Adding Datetime info")
+        [self.tweets.update({"_id": tweet["_id"]},
+                            {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
+         for tweet in self.tweets.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
+        self.log.info("Adding Datetime info")

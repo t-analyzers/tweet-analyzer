@@ -3,41 +3,22 @@ from collections import defaultdict
 import pandas as pd
 from pandas import DataFrame, Series
 
+from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
-from shared.mongo_wrapper import *
-from shared.log import Log
+from shared.decorators import trace
 
 # coding=utf-8
 # write code...
 
 
-class SimpleAnalyzer(object):
+class TweetCounter(BaseAnalyzer):
     """
-    簡単な集計を行い、DataFrameを作成するクラス
+    時間帯ごとのつぶやき数を集計するクラス
     """
     def __init__(self):
-        self.__log = Log("spam_detector")
-        self.__tweets = MongoWrapper.connect_tweets()
+        super().__init__()
 
-    def get_text_data(self, search_condition: dict) -> DataFrame:
-        """
-        つぶやきの内容をMongoDBから取得する
-        :param search_condition: 検索の絞り込み条件
-        :return: DataFrame
-        """
-
-        date_format = '%Y/%m/%d %a %H:%M:%S'
-        results = [
-            {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
-             'retweet_count': tweet['retweet_count'], 'id': tweet['id'],
-             'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
-            for tweet in self.__tweets.find(search_condition,
-                                            {'created_datetime': 1, 'retweet_count': 1, 'id': 1, 'user': 1, 'text': 1})]
-
-        df = DataFrame(results, columns=['created_datetime', 'retweet_count', 'id', 'user.screen_name', 'text'])
-        df.sort_values(by='created_datetime', ascending=False).reset_index(drop=True)
-        return df
-
+    @trace()
     def get_time_series_data(self, search_condition: dict, date_format: str) -> DataFrame:
         """
         日付フォーマットに合致するつぶやき数を集計し、DataFrameにまとめて返す
@@ -54,8 +35,8 @@ class SimpleAnalyzer(object):
         not_spam_norm_dict = defaultdict(int)
         not_spam_ret_dict = defaultdict(int)
 
-        for tweet in self.__tweets.find(search_condition,
-                                        {'_id': 1, 'created_datetime': 1, 'retweeted_status': 1, 'spam': 1}):
+        for tweet in self.tweets.find(search_condition,
+                                      {'_id': 1, 'created_datetime': 1, 'retweeted_status': 1, 'spam': 1}):
 
             str_date = date_to_japan_time(tweet['created_datetime']).strftime(date_format)
             all_date_dict[str_date] += 1
