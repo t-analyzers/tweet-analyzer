@@ -60,3 +60,4 @@ analyzer/.ipynb_checkpoints
 /.idea
 
 *.xlsx
+out/*.json
