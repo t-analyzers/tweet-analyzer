@@ -22,7 +22,7 @@ class PnDictScorer(MecabAnalyzer):
         self.PN_DICT = self._init_pn_dict()
 
     @trace()
-    def update_pnegaposi(self, start_datetime: datetime, end_datetime: datetime):
+    def update_negaposi(self, start_datetime: datetime, end_datetime: datetime):
         """
         ネガポジスコアを算出し、MongoDBにセットする。
         リツィート/スパムは対象外。
