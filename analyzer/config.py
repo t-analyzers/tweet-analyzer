@@ -18,7 +18,7 @@ PROXY = ""
 
 # MECAB
 # example: /usr/local/Cellar/mecab/0.996/lib/mecab/dic/mecab-ipadic-neologd
-MECAB_SYS_DICT = ""
+MECAB_USER_DICT = ""
 
 # E-mail
 MAIL_FROM = ""

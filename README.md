@@ -87,8 +87,9 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 ### pn_dict_scorer.py
 現状は、単語感情極性対応を用いて文章（つぶやき）の極性値をネガポジスコアとして算出します。  
 
-### svn_scorer.py
-サポートベクターマシンを使ってネガポジ判定を行います。
+### svm_scorer.py
+サポートベクターマシンを使ってネガポジ判定を行います。  
+conf/sample_tweets.tsvを教師データとしています。  
 
 ### feature_words_extractor.py
 archive.pyで取り込んだツイートをMeCabを使って形態素解析を行い名詞を抽出し、TF-IDFモデルで日別の特徴語を抽出します。

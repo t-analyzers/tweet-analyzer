@@ -20,14 +20,16 @@ def cmd():
 
 @cmd.command('a', short_help=': save the tweet to MongoDB.')
 def archive_tweets():
+    # つぶやきを取得し、DBにINSERT
     TweetArchiver().archive()
 
     today = datetime.today()
     tomorrow = today + timedelta(days=1)
     # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな14日間の範囲で検索する。
     two_weeks_ago = tomorrow - timedelta(days=14)
+    # スパムの検出
     SpamDetector().divide_spam_tweet(start_datetime=two_weeks_ago, end_datetime=tomorrow, limit_tweet_count=60)
-
+    # 形態素解析を行い、極性値を算出する
     PnDictScorer().update_negaposi(start_datetime=two_weeks_ago, end_datetime=tomorrow)
 
 

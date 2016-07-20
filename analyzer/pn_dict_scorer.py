@@ -22,7 +22,7 @@ class PnDictScorer(MecabAnalyzer):
         self.PN_DICT = self._init_pn_dict()
 
     @trace()
-    def update_negaposi(self, start_datetime: datetime, end_datetime: datetime):
+    def update_pnegaposi(self, start_datetime: datetime, end_datetime: datetime):
         """
         ネガポジスコアを算出し、MongoDBにセットする。
         リツィート/スパムは対象外。
@@ -39,16 +39,16 @@ class PnDictScorer(MecabAnalyzer):
         # ネガポジスコアを算出し、DBにセットする
         score_list = []
         for tweet in self.tweets.find(search_condition, {'id': 1, 'text': 1}):
-            score = self._calc_negaposi_socore(tweet["text"])
+            score = self._calc_negaposi_score(tweet["text"])
             score_list.append(score)
-            self.tweets.update({'_id': tweet['_id']}, {'$set': {'negaposi': score}})
+            self.tweets.update({'_id': tweet['_id']}, {'$set': {'polarity': score}})
             # print("text: {}".format(tweet["text"]))
             # print("score: {}".format(score))
         ave = np.array(score_list).mean()
         print("ネガポジスコアの平均値は、{}でした。".format(ave))
         self.log.info("ネガポジスコアの算出完了")
 
-    def _calc_negaposi_socore(self, text: str) -> float:
+    def _calc_negaposi_score(self, text: str) -> float:
         """
         単語感情極性対応表を使って極性値の平均を算出する。
         :param text:文字列

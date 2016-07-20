@@ -36,8 +36,7 @@ class SvmScorer(MecabAnalyzer):
         score_series = self._svm_learn(target_series=text_series)
 
         for (tweet, score) in zip(target_tweets, score_series):
-            # TODO
-            # self.tweets.update({'_id': tweet['_id']}, {'$set': {'negaposi': score}})
+            self.tweets.update({'_id': tweet['_id']}, {'$set': {'negaposi': score}})
             print(score)
 
     def _svm_learn(self, target_series):
@@ -127,4 +126,4 @@ if __name__ == '__main__':
     tomorrow = today + timedelta(days=1)
     # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな14日間の範囲で検索する。
     two_weeks_ago = tomorrow - timedelta(days=14)
-    SvmScorer().set_negaposi_score(two_weeks_ago, tomorrow)
+    SvmScorer().update_negaposi(two_weeks_ago, tomorrow)
