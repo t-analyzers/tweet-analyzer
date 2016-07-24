@@ -21,6 +21,8 @@ import datetime
 from pytz import timezone
 import json
 import os.path
+from os.path import join, relpath
+from glob import glob
 
 #形態素解析のライブラリ
 import MeCab
@@ -239,6 +241,13 @@ def create_tweets_analyze_result(output_folder_path, start_date, end_date):
     condition = {'created_datetime': {'$gte': start_date, '$lte': end_date}}
     json.dump(get_feature_words_from_tweets_text(condition,'%Y/%m/%d'),file)
     file.close()
+    
+def create_feature_words_filelist(folder_path):
+    feature_words_files = [relpath(x, folder_path) for x in glob(join(folder_path, 'feature_words_*'))]
+    output_file_path = folder_path + 'feature_words_filelist.json'    
+    output_file = open(output_file_path,'w')
+    json.dump(feature_words_files,output_file)
+    output_file.close()
 
 ## main
 if __name__ == '__main__':
@@ -253,5 +262,6 @@ if __name__ == '__main__':
     print(end_date)
         
     output_folder_path = config_feature_words.OUTPUT_FOLDER_PATH
-
     create_tweets_analyze_result(output_folder_path, start_date, end_date)
+    
+    create_feature_words_filelist(output_folder_path)
