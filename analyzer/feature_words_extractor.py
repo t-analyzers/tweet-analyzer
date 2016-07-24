@@ -120,10 +120,9 @@ def get_tweets_data(condition):
     date_format = '%Y/%m/%d %H:%M:%S'
     results_list = []
     for tweet in tweet_collection.find(condition,{'created_datetime': 1, 'retweet_count': 1, 'id': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
-        #retweetの場合は処理をしない。また、retweet以外は処理する。 
-        if 'retweeted_status' in tweet:
-            print('retweet!')
-        else:    
+        #retweet以外を取り出す。 
+        if 'retweeted_status' not in tweet:
+#        if True:
             result = {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
               'retweet_count': tweet['retweet_count'], 'id': tweet['id'],
               'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
