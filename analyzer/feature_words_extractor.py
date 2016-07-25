@@ -244,7 +244,9 @@ def create_tweets_analyze_result(output_folder_path, start_date, end_date):
     
 def create_feature_words_filelist(folder_path):
     feature_words_files = [relpath(x, folder_path) for x in glob(join(folder_path, 'feature_words_*'))]
-    output_file_path = folder_path + 'feature_words_filelist.json'    
+    feature_words_files.sort(reverse=True)
+    output_file_path = folder_path + 'filelist-feature_words.json' 
+
     output_file = open(output_file_path,'w')
     json.dump(feature_words_files,output_file)
     output_file.close()
