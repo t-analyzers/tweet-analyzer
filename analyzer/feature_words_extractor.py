@@ -253,7 +253,7 @@ def create_feature_words_filelist(folder_path):
     output_file.close()
 
 
-def create_word_cloud(start_datetime, end_datetime):
+def create_word_cloud(output_folder_path, start_datetime, end_datetime):
     """
     MongoDBに格納されているつぶやきから日別の特徴語を抽出し、ワードクラウドを生成する。
     :param start_datetime: 検索対象の開始時刻
@@ -261,17 +261,17 @@ def create_word_cloud(start_datetime, end_datetime):
     """
     condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
     feature_word_list = get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
-    [feature_word_to_word_cloud(feature_word) for feature_word in feature_word_list]
+    [feature_word_to_word_cloud(output_folder_path, feature_word) for feature_word in feature_word_list]
 
 
-def feature_word_to_word_cloud(feature_word):
+def feature_word_to_word_cloud(output_folder_path, feature_word):
     """
     特徴語からワードクラウドに変換する。
     outディレクトリ以下に日別の画像ファイルを出力する。
     :param feature_word: 特徴語
     """
     file_name = 'wordcloud_' + feature_word['date'].replace('/', '') + '.png'
-    file_path = os.path.abspath(os.path.join('../out', file_name))
+    file_path = os.path.abspath(os.path.join(output_folder_path, file_name))
     # 特徴語の出現頻度は、リストの順番をもとに機械的に設定する。
     size = len(feature_word['feature_words'])
     array_of_tuples = [(word, size - idx) for idx, word in enumerate(feature_word['feature_words'])]
@@ -305,6 +305,6 @@ if __name__ == '__main__':
     print(end_date)
         
     output_folder_path = config_feature_words.OUTPUT_FOLDER_PATH
-    create_tweets_analyze_result(output_folder_path, start_date, end_date)
-    
+    create_tweets_analyze_result(output_folder_path, start_date, end_date)    
+    create_word_cloud(output_folder_path,start_date, end_date)
     create_feature_words_filelist(output_folder_path)
