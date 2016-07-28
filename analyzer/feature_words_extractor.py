@@ -23,6 +23,7 @@ import json
 import os.path
 from os.path import join, relpath
 from glob import glob
+from wordcloud import WordCloud
 
 #形態素解析のライブラリ
 import MeCab
@@ -43,7 +44,7 @@ EXTRACT_FEATURE_WORDS_MAX = config_feature_words.EXTRACT_FEATURE_WORDS_MAX
 TFIDF_EXCLUDE_APPEARANCE = config_feature_words.TFIDF_EXCLUDE_APPEARANCE
 
 
-def get_feature_words_from_tweets_text(condition, date_format):
+def get_feature_words_from_tweets_text(condition, date_format, extract_feature_words_max=EXTRACT_FEATURE_WORDS_MAX):
     """
     日付フォーマットに合致するつぶやきの頻出名詞をJSON形式で返す
     :param condition: 検索の絞り込み条件（Dictionary）
@@ -101,7 +102,7 @@ def get_feature_words_from_tweets_text(condition, date_format):
     # 結果の出力
     for i in range(0, len(target_time_units)) :
         words_dict[target_time_units[i]] = []
-        for x in  extract_feature_words(terms, tfidfs, i, EXTRACT_FEATURE_WORDS_MAX):
+        for x in  extract_feature_words(terms, tfidfs, i, extract_feature_words_max):
             words_dict[target_time_units[i]].append(x)
 
     results_list =[]
@@ -250,6 +251,46 @@ def create_feature_words_filelist(folder_path):
     output_file = open(output_file_path,'w')
     json.dump(feature_words_files,output_file)
     output_file.close()
+
+
+def create_word_cloud(start_datetime, end_datetime):
+    """
+    MongoDBに格納されているつぶやきから日別の特徴語を抽出し、ワードクラウドを生成する。
+    :param start_datetime: 検索対象の開始時刻
+    :param end_datetime: 検索対象の終了時刻
+    """
+    condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
+    feature_word_list = get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
+    [feature_word_to_word_cloud(feature_word) for feature_word in feature_word_list]
+
+
+def feature_word_to_word_cloud(feature_word):
+    """
+    特徴語からワードクラウドに変換する。
+    outディレクトリ以下に日別の画像ファイルを出力する。
+    :param feature_word: 特徴語
+    """
+    file_name = 'wordcloud_' + feature_word['date'].replace('/', '') + '.png'
+    file_path = os.path.abspath(os.path.join('../out', file_name))
+    # 特徴語の出現頻度は、リストの順番をもとに機械的に設定する。
+    size = len(feature_word['feature_words'])
+    array_of_tuples = [(word, size - idx) for idx, word in enumerate(feature_word['feature_words'])]
+    save_word_cloud_img(array_of_tuples, file_path)
+
+
+def save_word_cloud_img(frequencies, file_path):
+    """
+    ワードクラウドの画像ファイルを指定されたファイルパスに保存する。
+    参考：http://amueller.github.io/word_cloud/index.html
+    :param frequencies: タブル(単語, 出現頻度)のリスト
+    :param file_path: 画像ファイルのパス
+    """
+    # 日本語フォントのパスが正しく設定されている必要がある。
+    font_path = config_feature_words.JAPANESE_FONT_PATH
+    wc = WordCloud(background_color='white', max_font_size=320, font_path=font_path, width=900, height=500)
+    wc.generate_from_frequencies(frequencies)
+    wc.to_file(file_path)
+
 
 ## main
 if __name__ == '__main__':
