@@ -4,7 +4,7 @@
 # mongodb
 HOST = "localhost"
 PORT = 27017
-DB_NAME = "twitter-archive-new"
+DB_NAME = "twitter-archive"
 COLLECTION_NAME = "tweets"
 
 # twitter
