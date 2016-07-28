@@ -22,4 +22,9 @@ TFIDF_EXCLUDE_APPEARANCE = 5
 
 #出力先のフォルダのパス
 #OUTPUT_FOLDER_PATH = "../out/"
-OUTPUT_FOLDER_PATH = "/Users/hitoshi/Dropbox/Public/tweet-analyzer/data/"
+OUTPUT_FOLDER_PATH = "/Users/hitoshi/Dropbox/Public/tweet-analyzer/data/"OUTPUT_FOLDER_PATH = "../out/"
+
+# 日本語フォントのパス
+# OS Xなら/Library/Fonts, /System/Library/Fonts, ~/Library/Fontsあたりにあるはず。
+# EX: "/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"
+JAPANESE_FONT_PATH = ""
