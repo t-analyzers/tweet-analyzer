@@ -69,9 +69,9 @@ search_keywords.ymlに記載されたキーワードのリストをOR連結し�
 そのため検索範囲は、「最新のつぶやき〜DBに格納されている最新のつぶやき」となります。  
 検索完了後、created_datetimeキーにUTCから日本時間に変換した値をセットしています。  
 
-#### spam_detector.py 
+#### spam_detector.py
 1時間以内に60回以上リツイートされているものはスパム判定しています。  
-該当する場合、DBに対して更新（{'spam': True}をセット）をかけます。 
+該当する場合、DBに対して更新（{'spam': True}をセット）をかけます。
 
 #### sample_analyzer.py
 簡単な集計を行い、DataFrameを生成します。
@@ -93,12 +93,16 @@ conf/sample_tweets.tsvを教師データとしています。
 
 ### feature_words_extractor.py
 archive.pyで取り込んだツイートをMeCabを使って形態素解析を行い名詞を抽出し、TF-IDFモデルで日別の特徴語を抽出します。
-抽出結果はJSON形式で以下のようにファイルに出力します。
+抽出結果はJSON形式と画像で以下のようにファイルに出力します。
 
 * 特徴語データ:
 feature_words_YYYYMMDD-YYYYMMDD.json:[{"date": , "tweet_count":, "retweet_count":,"feature_words":[...]},...] ※dateでソート
+* 特徴語データファイルリスト:
+filelist-feature_words.json: 特徴語データファイルのリスト（降順）。
 * 日別ツイートデータ:
 tweets_YYYYMMDD.json:  [{'created_datetime': ,'retweet_count': , 'id': , user.screen_name': , 'text':, 'media_urls':, 'nouns': ,'PrintID' }, ...] ※created_datetimeでソート
+* 日別ワードクラウド画像:
+wordcloud_YYYYMMDD.png
 
 解析する日数、抽出する特徴語の数、ファイル出力先フォルダはconfig_feature_words.pyで指定できます。
 また、本プログラムでは以下のライブラリを使用します。（Anacondaをインストールするとこれらのライブラリはインストール済みのようです。）
@@ -108,9 +112,7 @@ tweets_YYYYMMDD.json:  [{'created_datetime': ,'retweet_count': , 'id': , user.sc
 * scipy
 * numpy
 
-上記だけで動作しない場合はopenblasも必要かもしれません。Anacondaの「Enviroments」からインストールしてください。
-
-なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。 
+なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。
 
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  
