@@ -24,14 +24,12 @@ import os.path
 from os.path import join, relpath
 from glob import glob
 from wordcloud import WordCloud
+import shared.text_utility as util
 
 #形態素解析のライブラリ
 import MeCab
 #TF-IDFフィルタのクラス
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-#正規表現処理用のクラス
-import re
 
 client = pymongo.MongoClient(config_feature_words.HOST, config_feature_words.PORT)
 tweet_collection = client[config_feature_words.DB_NAME][config_feature_words.COLLECTION_NAME]
@@ -77,7 +75,7 @@ def get_feature_words_from_tweets_text(condition, date_format, extract_feature_w
             retweets_count_dict[str_date] += 1
         
         #形態素解析で名詞を抽出して文字列として連結する
-        nouns_dict[str_date] += " " + split_text_only_noun(get_text_eliminated_some_pattern_words(tweet['text']))
+        nouns_dict[str_date] += " " + split_text_only_noun(util.get_text_eliminated_some_pattern_words(tweet['text']))
 
     #日付リストをソート
     target_time_units.sort()
@@ -142,8 +140,8 @@ def get_tweets_data(condition):
             results_list.append(result)
 
     for r in results_list :
-        r['nouns'] =  split_text_only_noun(get_text_eliminated_some_pattern_words(r['text']))
-        r['PrintID'] = ",".join(get_nps_printid(r['text']))
+        r['nouns'] =  split_text_only_noun(util.get_text_eliminated_some_pattern_words(r['text']))
+        r['PrintID'] = ",".join(util.get_nps_printid(r['text']))
 
     #ツイートの作成日(created_datetime)で昇順ソートする
     return sorted(results_list,key=lambda x:x["created_datetime"])
@@ -169,54 +167,6 @@ def extract_feature_words(terms, tfidfs, i, n):
     top_n_idx = tfidf_array.argsort()[-n:][::-1]
     words = [terms[idx] for idx in top_n_idx]
     return words
-    
-### twitter accountとURLを文字列から消す
-def get_text_eliminated_some_pattern_words(text):    
-    text_tmp = text
-    
-    twitter_account_pattern = r"@(.+?)\s"
-    text_tmp = get_eliminated_text(twitter_account_pattern,text_tmp)
-    
-    url_pattern = r"http(.+?)($|\s)"
-    text_tmp = get_eliminated_text(url_pattern,text_tmp)
-    
-    networkprint_id_pattern = r"[A-Z0-9]{10}"
-    text_tmp = get_eliminated_text(networkprint_id_pattern,text_tmp)
-    
-    nps_id_pattern = r"[A-Z0-9]{8}"
-    text_tmp = get_eliminated_text(nps_id_pattern,text_tmp) 
-    
-    hashtag_pattern =r"#(.+?)($|\s)"
-    text_tmp = get_eliminated_text(hashtag_pattern,text_tmp)    
-    
-    return text_tmp
-
-### 文字列にNPSの予約番号が含まれている場合、その予約番号を返す。含まれていない場合はから文字で返す。
-def get_nps_printid(text):
-
-    #Network Printの番号は10桁なので事前に削除する。
-    networkprint_pattern = r"[A-Z0-9]{10}"
-    text_tmp = get_eliminated_text(networkprint_pattern,text)
-    
-    nps_pattern = r"[A-Z0-9]{8}"
-    iterator = re.finditer(nps_pattern,text_tmp,re.MULTILINE)
-    
-    print_ids = []
-    
-    for match in iterator:
-        print_ids.append(match.group())
-    
-    return print_ids
-    
-### patternで指定した正規表現パターンの文字列を消す
-def get_eliminated_text(pattern, text):
-    iterator = re.finditer(pattern,text,re.MULTILINE)
-    eliminated_text = text
-    
-    for match in iterator:
-        eliminated_text = eliminated_text.replace(match.group(),'')
-        
-    return eliminated_text
 
 #
 def create_tweets_analyze_result(output_folder_path, start_date, end_date):
