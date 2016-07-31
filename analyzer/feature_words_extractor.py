@@ -192,16 +192,15 @@ def create_tweets_analyze_result(output_folder_path, start_date, end_date):
     condition = {'created_datetime': {'$gte': start_date, '$lte': end_date}}
     json.dump(get_feature_words_from_tweets_text(condition,'%Y/%m/%d'),file)
     file.close()
-    
-def create_feature_words_filelist(folder_path):
-    feature_words_files = [relpath(x, folder_path) for x in glob(join(folder_path, 'feature_words_*'))]
-    feature_words_files.sort(reverse=True)
-    output_file_path = folder_path + 'filelist-feature_words.json' 
+
+def create_filelist(folder_path, target_filename_regexp, output_filename):
+    files_list = [relpath(x, folder_path) for x in glob(join(folder_path, target_filename_regexp))]
+    files_list.sort(reverse=True)
+    output_file_path = folder_path + output_filename 
 
     output_file = open(output_file_path,'w')
-    json.dump(feature_words_files,output_file)
+    json.dump(files_list,output_file)
     output_file.close()
-
 
 def create_word_cloud(output_folder_path, start_datetime, end_datetime):
     """
@@ -257,4 +256,5 @@ if __name__ == '__main__':
     output_folder_path = config_feature_words.OUTPUT_FOLDER_PATH
     create_tweets_analyze_result(output_folder_path, start_date, end_date)    
     create_word_cloud(output_folder_path,start_date, end_date)
-    create_feature_words_filelist(output_folder_path)
+    create_filelist(output_folder_path, 'feature_words_*', 'filelist-feature_words.json')
+    create_filelist(output_folder_path, 'tweets_*', 'filelist-tweets.json')
