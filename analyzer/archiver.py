@@ -121,7 +121,7 @@ class TweetArchiver(BaseAnalyzer):
         すでにセット済の場合は、なにもしない。
         :return: なし
         """
-        [self.tweets.update({"_id": tweet["_id"]},
-                            {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
-         for tweet in self.tweets.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1})]
+        for tweet in self.tweets.find({"created_datetime": {"$exists": False}}, {"_id": 1, "created_at": 1}):
+            self.tweets.update({"_id": tweet["_id"]},
+                               {"$set": {"created_datetime": str_to_date_jp(tweet["created_at"])}})
         self.log.info("Adding Datetime info")

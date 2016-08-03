@@ -14,7 +14,6 @@ from shared.decorators import trace
 class PnDictScorer(MecabAnalyzer):
     """
     日本語評価極性辞書を用いてネガポジ判定を行うクラス
-    今のところ精度はゴミ！！
     """
 
     def __init__(self):

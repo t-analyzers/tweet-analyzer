@@ -15,6 +15,7 @@ class TweetCounter(BaseAnalyzer):
     """
     時間帯ごとのつぶやき数を集計するクラス
     """
+
     def __init__(self):
         super().__init__()
 
@@ -42,7 +43,7 @@ class TweetCounter(BaseAnalyzer):
             all_date_dict[str_date] += 1
 
             # spamの除去
-            if ('spam' in tweet) and (tweet['spam'] == True):
+            if ('spam' in tweet) and (tweet['spam'] is True):
                 spam_dict[str_date] += 1
                 not_spam_all_dict[str_date] += 0
             else:

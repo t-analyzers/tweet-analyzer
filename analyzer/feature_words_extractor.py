@@ -202,21 +202,25 @@ def create_filelist(folder_path, target_filename_regexp, output_filename):
     json.dump(files_list,output_file)
     output_file.close()
 
+
 def create_word_cloud(output_folder_path, start_datetime, end_datetime):
     """
     MongoDBに格納されているつぶやきから日別の特徴語を抽出し、ワードクラウドを生成する。
+    :param output_folder_path: 出力先フォルダのパス
     :param start_datetime: 検索対象の開始時刻
     :param end_datetime: 検索対象の終了時刻
     """
     condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
     feature_word_list = get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
-    [feature_word_to_word_cloud(output_folder_path, feature_word) for feature_word in feature_word_list]
+    for feature_word in feature_word_list:
+        feature_word_to_word_cloud(output_folder_path, feature_word)
 
 
 def feature_word_to_word_cloud(output_folder_path, feature_word):
     """
     特徴語からワードクラウドに変換する。
     outディレクトリ以下に日別の画像ファイルを出力する。
+    :param output_folder_path: 出力先フォルダのパス
     :param feature_word: 特徴語
     """
     file_name = 'wordcloud_' + feature_word['date'].replace('/', '') + '.png'
