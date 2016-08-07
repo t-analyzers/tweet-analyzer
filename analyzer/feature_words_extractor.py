@@ -122,12 +122,12 @@ def get_tweets_data(condition):
     """
     date_format = '%Y/%m/%d %H:%M:%S'
     results_list = []
-    for tweet in tweet_collection.find(condition,{'created_datetime': 1, 'retweet_count': 1, 'id': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
+    for tweet in tweet_collection.find(condition,{'created_datetime': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
         #retweet以外を取り出す。 
         if 'retweeted_status' not in tweet:
 #        if True:
             result = {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
-              'retweet_count': tweet['retweet_count'], 'id': tweet['id'],
+              'retweet_count': tweet['retweet_count'], 'id': tweet['id_str'],
               'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
             
             #media_urlを持つtweetにはそのURLを保存する
