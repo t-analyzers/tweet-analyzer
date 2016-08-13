@@ -11,8 +11,8 @@ import config_metadata_api
 import datetime
 from pytz import timezone
 import json
-import os.path
-from os.path import join, relpath
+#import os.path
+#from os.path import join, relpath
 import copy
 
 import urllib.request, urllib.parse
@@ -25,17 +25,17 @@ input_collection = client[config_metadata_api.DB_NAME][config_metadata_api.INPUT
 output_collection = client[config_metadata_api.DB_NAME][config_metadata_api.OUTPUT_COLLECTION_NAME]
 
 #
-def create_metadata_file(output_folder_path, start_date, end_date):
-    
-    date = start_date
-    str_date = format(date.strftime('%Y%m%d'))
-    file_path = output_folder_path + 'metadata_' + str_date + '.json'
-
-    file = open(file_path,'w')
-    condition = {'created_datetime': {'$gte': start_date, '$lt': end_date}}
-    json.dump(get_metadata(condition),file)
-    file.close()
-    print(file_path)
+#def create_metadata_file(output_folder_path, start_date, end_date):
+#    
+#    date = start_date
+#    str_date = format(date.strftime('%Y%m%d'))
+#    file_path = output_folder_path + 'metadata_' + str_date + '.json'
+#
+#    file = open(file_path,'w')
+#    condition = {'created_datetime': {'$gte': start_date, '$lt': end_date}}
+#    json.dump(get_metadata(condition),file)
+#    file.close()
+#    print(file_path)
 
 def get_metadata(condition):
     """
@@ -104,11 +104,10 @@ def get_negaposi_metadata(text):
 
 if __name__ == '__main__':
     
-    DELTA_DATE = 15
-    HOUR = 12
+    DELTA_DATE = 1
     
     d = datetime.datetime.now()
-    date = datetime.datetime(d.year,d.month,d.day,HOUR,0,0,0,timezone('Asia/Tokyo'))
+    date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
     start_date = date - datetime.timedelta(days=DELTA_DATE)
     print(start_date)
     
@@ -116,9 +115,9 @@ if __name__ == '__main__':
     end_date = date - datetime.timedelta(days=DELTA_DATE)
     print(end_date)
     
-    output_folder_path = config_metadata_api.OUTPUT_FOLDER_PATH
-    create_metadata_file(output_folder_path, start_date, end_date)
+#    output_folder_path = config_metadata_api.OUTPUT_FOLDER_PATH
+#    create_metadata_file(output_folder_path, start_date, end_date)
     
-#    condition = {'created_datetime': {'$gte': start_date, '$lt': end_date}}
-#    result = get_metadata(condition)
-#    print(result)
+    condition = {'created_datetime': {'$gte': start_date, '$lt': end_date}}
+    result = get_metadata(condition)
+    print(result)
