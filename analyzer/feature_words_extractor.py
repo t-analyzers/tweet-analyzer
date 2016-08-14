@@ -5,17 +5,25 @@ archve.pyで取り込んだtweetsを分析する。
 　日にちごとの頻出単語トップXX
   XXはconfig_feature_words.pyで設定可能。
  
- 出力ファイル：
-   - feature_words_YYYYMMDD-YYYYMMDD.json
-       [{"date": , "tweet_count":, "retweet_count":,"feature_words":[...]},...] ※dateでソート
-   - tweets_YYYYMMDD.json x 指定期間日数
-       [{'created_datetime': ,'retweet_count': , 'id': , user.screen_name': , 'text':, 'media_urls':, 'nouns': ,'PrintID' }, ...] ※created_datetimeでソート
+・出力ファイル：
+　- 特徴語データ: feature_words_YYYYMMDD-YYYYMMDD.json
+     [{"date": 日付, "tweet_count":ツイート数, "retweet_count":リツイート数,"feature_words":[特徴語リスト]},...] ※dateでソート
+　- 日別ツイートデータ: tweets_YYYYMMDD.json
+     [{'created_datetime': 日時,'retweet_count':収集時点のリツイート数, 
+       'id': ツイートのID(文字列形式:id_str), user.screen_name': ツイッターアカウント名, 'text':ツイート本文, 'media_urls'(option):画像URL, 
+       'PrintID'(option):プリント予約番号, 'retweet'(option):1 ※リツイートの場合に固定で入る項目}, ...] ※created_datetimeでソート
+　- 特徴語データファイルリスト: filelist-feature_words.json: 
+     特徴語データ出力先フォルダ内の特徴語データファイルのリスト（降順）。"feature_words_"で始まるファイルが対象。
+　- ツイートファイルリスト: filelist-tweets.json
+     日別ツイートデータ出力先フォルダ内の日別ツイートデータファイルのリスト（降順）。"tweets_"ではじまるファイルが対象。
+　- 日別ワードクラウド画像: wordcloud_YYYYMMDD.png
+
+       
 @author: hitoshi
 """
 from collections import defaultdict
 import pymongo
-#import date_utilities
-from shared.datetime_extentions import *
+import shared.datetime_extentions as dutil
 import config_feature_words
 import datetime
 from pytz import timezone
@@ -41,8 +49,24 @@ EXTRACT_FEATURE_WORDS_MAX = config_feature_words.EXTRACT_FEATURE_WORDS_MAX
 #TF-IDFパラメータ：　除外する合計出現回数
 TFIDF_EXCLUDE_APPEARANCE = config_feature_words.TFIDF_EXCLUDE_APPEARANCE
 
+def create_tweets_analyze_result_file(output_folder_path, start_date, end_date):
+    """
+    ツイート分析（特徴語抽出）を実行し、結果をファイル(feature_words_YYYYMMDD-YYYYMMDD.json)に保存する。
+    :param output_folder_path: 分析結果ファイルの保存先。
+    :param start_datetime: 検索対象の開始時刻
+    :param end_datetime: 検索対象の終了時刻
+    """
+    str_end_date = format(end_date.strftime('%Y%m%d'))
+    str_start_date = format(start_date.strftime('%Y%m%d'))
+    file_path = output_folder_path + 'feature_words_' + str_start_date + '-' + str_end_date + '.json'    
 
-def get_feature_words_from_tweets_text(condition, date_format, extract_feature_words_max=EXTRACT_FEATURE_WORDS_MAX):
+    #分析（特徴語抽出）を実行し、ファイルに保存する    
+    file = open(file_path,'w')
+    condition = {'created_datetime': {'$gte': start_date, '$lte': end_date}}
+    json.dump(_get_feature_words_from_tweets_text(condition,'%Y/%m/%d'),file)
+    file.close()
+    
+def _get_feature_words_from_tweets_text(condition, date_format, extract_feature_words_max=EXTRACT_FEATURE_WORDS_MAX):
     """
     日付フォーマットに合致するつぶやきの頻出名詞をJSON形式で返す
     :param condition: 検索の絞り込み条件（Dictionary）
@@ -60,8 +84,7 @@ def get_feature_words_from_tweets_text(condition, date_format, extract_feature_w
     
     #tweetsの読み込み（mongoDBからのfind時のsortはメモリ不足でエラーになるため、ファイル出力前にこのプログラムでソートする）
     for tweet in tweet_collection.find(condition, {'_id': 1, 'created_datetime': 1,'retweeted_status': 1, 'text': 1}):
-        #str_date = date_utilities.date_to_japan_time(tweet['created_datetime']).strftime(date_format)
-        str_date = date_to_japan_time(tweet['created_datetime']).strftime(date_format)
+        str_date = dutil.date_to_japan_time(tweet['created_datetime']).strftime(date_format)
         
         #初めて処理する日付の場合はtarget_time_unitsに格納する
         if (str_date in target_time_units) == False :
@@ -75,7 +98,7 @@ def get_feature_words_from_tweets_text(condition, date_format, extract_feature_w
             retweets_count_dict[str_date] += 1
         
         #形態素解析で名詞を抽出して文字列として連結する
-        nouns_dict[str_date] += " " + split_text_only_noun(util.get_text_eliminated_some_pattern_words(tweet['text']))
+        nouns_dict[str_date] += " " + _split_text_only_noun(util.get_text_eliminated_some_pattern_words(tweet['text']))
 
     #日付リストをソート
     target_time_units.sort()
@@ -100,7 +123,7 @@ def get_feature_words_from_tweets_text(condition, date_format, extract_feature_w
     # 結果の出力
     for i in range(0, len(target_time_units)) :
         words_dict[target_time_units[i]] = []
-        for x in  extract_feature_words(terms, tfidfs, i, extract_feature_words_max):
+        for x in  _extract_feature_words(terms, tfidfs, i, extract_feature_words_max):
             words_dict[target_time_units[i]].append(x)
 
     results_list =[]
@@ -111,59 +134,9 @@ def get_feature_words_from_tweets_text(condition, date_format, extract_feature_w
     print(results_list)
     #dateで降順ソートする
     return sorted(results_list,key=lambda x:x["date"],reverse=True)
-
-def get_tweets_data(condition):
-    """
-    つぶやきの内容をMongoDBから取得する
-    :param condition: 検索の絞り込み条件（Dictionary）
-    :return: JSON [{},...]
-    """
-    date_format = '%Y/%m/%d %H:%M:%S'
-    results_list = []
-    for tweet in tweet_collection.find(condition,{'created_at': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
-
-        retweet_flag = False
-        #retweetは元のツイートを取り出す
-        if 'retweeted_status' in tweet:
-            tweet = tweet['retweeted_status']
-            retweet_flag = True
-                    
-        exist_flag = False
-        for t in results_list :
-            if(t['id']==tweet['id_str'] and t['user.screen_name']==tweet['user']['screen_name']):
-                exist_flag = True
-                break
-        #すでにresult_listに含まれているツイートは処理しない
-        if exist_flag == False:
-#            result = {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
-            result = {'created_datetime': str_to_date_jp(tweet["created_at"]).strftime(date_format),
-              'retweet_count': tweet['retweet_count'], 'id': tweet['id_str'],
-              'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
-            
-            #media_urlを持つtweetにはそのURLを保存する
-            media_elements = tweet.get('entities').get('media')
-            if media_elements != None:
-                media_urls = []
-                for media in media_elements:
-                    media_url = media.get('media_url')
-                    if media_url != None: media_urls.append(media_url)
-                result['media_urls'] = ",".join(media_urls)
-                #result['media_urls'] = media_urls
-            
-            #リツイートの場合は印をつける
-            if retweet_flag == True: result['retweet'] = 1
-            
-            results_list.append(result)
-
-    for r in results_list :
-#        r['nouns'] =  split_text_only_noun(util.get_text_eliminated_some_pattern_words(r['text']))
-        r['PrintID'] = ",".join(util.get_nps_printid(r['text']))
-
-    #ツイートの作成日(created_datetime)で昇順ソートする
-    return sorted(results_list,key=lambda x:x["created_datetime"])
     
 ### MeCab による単語への分割関数 (名詞のみ残す)
-def split_text_only_noun(text):
+def _split_text_only_noun(text):
     tagger = MeCab.Tagger()
     tagger.parse('')
     node = tagger.parseToNode(text)
@@ -178,58 +151,101 @@ def split_text_only_noun(text):
     return " ".join(words)
     
 ### TF-IDF の結果からi 番目のドキュメントの特徴的な上位 n 語を取り出す
-def extract_feature_words(terms, tfidfs, i, n):
+def _extract_feature_words(terms, tfidfs, i, n):
     tfidf_array = tfidfs[i]
     top_n_idx = tfidf_array.argsort()[-n:][::-1]
     words = [terms[idx] for idx in top_n_idx]
     return words
 
-#
-def create_tweets_analyze_result(output_folder_path, start_date, end_date):
-    
+def create_tweets_files(output_folder_path, start_date, end_date):
+    """
+    日別ツイートファイル(tweets_YYYYMMDD.json)を保存する。すでに存在していた場合は上書きせずスキップする。
+    :param output_folder_path: 日別ツイートファイルの保存先。
+    :param start_datetime: 検索対象の開始時刻
+    :param end_datetime: 検索対象の終了時刻
+    """
     for i in range(0, ANALYZE_DAYS) :
         date = start_date + datetime.timedelta(days=i)
         str_date = format(date.strftime('%Y%m%d'))
         file_path = output_folder_path + 'tweets_' + str_date + '.json'    
-
+    
         if os.path.exists(file_path) == False:
             file = open(file_path,'w')
             condition = {'created_datetime': {'$gte': date, '$lt': date + datetime.timedelta(days=1)}}
-            json.dump(get_tweets_data(condition),file)
+            json.dump(_get_tweets_data(condition),file)
             file.close()
             print(file_path)
- 
 
-    str_end_date = format(end_date.strftime('%Y%m%d'))
-    str_start_date = format(start_date.strftime('%Y%m%d'))
-    file_path = output_folder_path + 'feature_words_' + str_start_date + '-' + str_end_date + '.json'    
+def _get_tweets_data(condition):
+    """
+    つぶやきの内容をMongoDBから取得するして必要な項目を抽出する
+    :param condition: 検索の絞り込み条件（Dictionary）
+    :return: JSON [{},...]
+    """
+
+    #ツイートを取得しcreated_datetimeでソート
+    tweets_tmp = []
+    for tweet in tweet_collection.find(condition,{'created_datetime':1 ,'created_at': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
+        tweets_tmp.append(tweet)
     
-    file = open(file_path,'w')
-    condition = {'created_datetime': {'$gte': start_date, '$lte': end_date}}
-    json.dump(get_feature_words_from_tweets_text(condition,'%Y/%m/%d'),file)
-    file.close()
+    tweets = sorted(tweets_tmp,key=lambda x:x["created_datetime"])
 
-def create_filelist(folder_path, target_filename_regexp, output_filename):
-    files_list = [relpath(x, folder_path) for x in glob(join(folder_path, target_filename_regexp))]
-    files_list.sort(reverse=True)
-    output_file_path = folder_path + output_filename 
+    date_format = '%Y/%m/%d %H:%M:%S' 
+    results_list = []
+    for i in range(0,len(tweets)):
+        tweet = tweets[i]
+        retweet_flag = False
+        #retweetは元のツイートを取り出す
+        if 'retweeted_status' in tweet:
+            tweet = tweet['retweeted_status']
+            retweet_flag = True
+                    
+        exist_flag = False
+        for t in results_list :
+            if(t['id']==tweet['id_str'] and t['user.screen_name']==tweet['user']['screen_name']):
+                exist_flag = True
+                break
+        #すでにresult_listに含まれているツイートは処理しない(リツイートが先に処理されたら元ツイートが入らないため、事前にソートしておく)
+        if exist_flag == False:
+            result = {'created_datetime': dutil.str_to_date_jp(tweet["created_at"]).strftime(date_format),
+              'retweet_count': tweet['retweet_count'], 'id': tweet['id_str'],
+              'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
+            
+            #media_urlを持つtweetにはそのURLを保存する
+            media_elements = tweet.get('entities').get('media')
+            if media_elements != None:
+                media_urls = []
+                for media in media_elements:
+                    media_url = media.get('media_url')
+                    if media_url != None: media_urls.append(media_url)
+                result['media_urls'] = ",".join(media_urls)
+                #result['media_urls'] = media_urls  ##media_urlsが複数入っているツイートは見たことないが、複数入る前提でリストにしておくのが良さそう。
+            
+            printids = util.get_nps_printid(result['text'])
+            if len(printids) > 0:
+                result['PrintID'] = ",".join(printids)
+                
+            #リツイートの場合は印をつける
+            if retweet_flag == True: result['retweet'] = 1
+            
+            results_list.append(result)
 
-    output_file = open(output_file_path,'w')
-    json.dump(files_list,output_file)
-    output_file.close()
+    #ツイートの作成日(created_datetime)で昇順ソートする
+    return sorted(results_list,key=lambda x:x["created_datetime"])
 
 def create_word_cloud(output_folder_path, start_datetime, end_datetime):
     """
     MongoDBに格納されているつぶやきから日別の特徴語を抽出し、ワードクラウドを生成する。
+    :param output_folder_path: ワードクラウド画像ファイルの保存先。
     :param start_datetime: 検索対象の開始時刻
     :param end_datetime: 検索対象の終了時刻
     """
     condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
-    feature_word_list = get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
-    [feature_word_to_word_cloud(output_folder_path, feature_word) for feature_word in feature_word_list]
+    feature_word_list = _get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
+    [_feature_word_to_word_cloud(output_folder_path, feature_word) for feature_word in feature_word_list]
 
 
-def feature_word_to_word_cloud(output_folder_path, feature_word):
+def _feature_word_to_word_cloud(output_folder_path, feature_word):
     """
     特徴語からワードクラウドに変換する。
     outディレクトリ以下に日別の画像ファイルを出力する。
@@ -240,10 +256,10 @@ def feature_word_to_word_cloud(output_folder_path, feature_word):
     # 特徴語の出現頻度は、リストの順番をもとに機械的に設定する。
     size = len(feature_word['feature_words'])
     array_of_tuples = [(word, size - idx) for idx, word in enumerate(feature_word['feature_words'])]
-    save_word_cloud_img(array_of_tuples, file_path)
+    _save_word_cloud_img(array_of_tuples, file_path)
 
 
-def save_word_cloud_img(frequencies, file_path):
+def _save_word_cloud_img(frequencies, file_path):
     """
     ワードクラウドの画像ファイルを指定されたファイルパスに保存する。
     参考：http://amueller.github.io/word_cloud/index.html
@@ -256,6 +272,20 @@ def save_word_cloud_img(frequencies, file_path):
     wc.generate_from_frequencies(frequencies)
     wc.to_file(file_path)
 
+def create_filelist(folder_path, target_filename_regexp, output_filename):
+    """
+    指定したフォルダパス内の正規表現にマッチするファイル名のリストファイルを作成する。
+    :param folder_path: ファイル名を取得するフォルダのパス。また、リストファイルの保存先。
+    :param target_filename_regexp: 取得するファイル名の正規表現。
+    :param output_filename: リストファイルのファイル名
+    """
+    files_list = [relpath(x, folder_path) for x in glob(join(folder_path, target_filename_regexp))]
+    files_list.sort(reverse=True)
+    output_file_path = folder_path + output_filename 
+
+    output_file = open(output_file_path,'w')
+    json.dump(files_list,output_file)
+    output_file.close()
 
 ## main
 if __name__ == '__main__':
@@ -263,14 +293,28 @@ if __name__ == '__main__':
     d = datetime.datetime.now()
     date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
     start_date = date - datetime.timedelta(days=ANALYZE_DAYS)
-    print(start_date)
-    
     date = datetime.datetime(d.year,d.month,d.day,23,59,59,999999,timezone('Asia/Tokyo'))
     end_date = date - datetime.timedelta(days=1)
+    print(start_date)
     print(end_date)
-        
+
+    #出力先パスを指定        
     output_folder_path = config_feature_words.OUTPUT_FOLDER_PATH
-    create_tweets_analyze_result(output_folder_path, start_date, end_date)    
+    print("[info] 出力先パス： " + output_folder_path)
+    
+    #ツイート分析結果をファイルに保存する
+    print("[info]ツイート分析開始")
+    create_tweets_analyze_result_file(output_folder_path, start_date, end_date)
+    #分析したツイートを日別ツイートファイルとして保存する（存在しないファイルを作成。上書きしない）
+    print("[info] 日別ツイートファイル作成開始")
+    create_tweets_files(output_folder_path, start_date, end_date)
+    #分析したツイートの日別ワードクラウドを画像ファイルとして保存する（上書き）
+    print("[info] 日別ワードクラウド作成開始")
     create_word_cloud(output_folder_path,start_date, end_date)
+    
+    #出力先フォルダ内の特徴語ファイルと日別ツイートファイルのリストを作成する（上書き）
+    print("[info] ファイルリストの作成開始")
     create_filelist(output_folder_path, 'feature_words_*', 'filelist-feature_words.json')
     create_filelist(output_folder_path, 'tweets_*', 'filelist-tweets.json')
+    
+    print("[info] 処理完了")
