@@ -237,24 +237,13 @@ def _get_tweets_data(condition):
 def create_word_cloud(output_folder_path, start_datetime, end_datetime):
     """
     MongoDBに格納されているつぶやきから日別の特徴語を抽出し、ワードクラウドを生成する。
-<<<<<<< HEAD
-    :param output_folder_path: 出力先フォルダのパス
-=======
     :param output_folder_path: ワードクラウド画像ファイルの保存先。
->>>>>>> dev_furuhito0519
     :param start_datetime: 検索対象の開始時刻
     :param end_datetime: 検索対象の終了時刻
     """
     condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
-<<<<<<< HEAD
-    feature_word_list = get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
-    for feature_word in feature_word_list:
-        feature_word_to_word_cloud(output_folder_path, feature_word)
-=======
     feature_word_list = _get_feature_words_from_tweets_text(condition, '%Y/%m/%d', extract_feature_words_max=120)
     [_feature_word_to_word_cloud(output_folder_path, feature_word) for feature_word in feature_word_list]
->>>>>>> dev_furuhito0519
-
 
 def _feature_word_to_word_cloud(output_folder_path, feature_word):
     """
