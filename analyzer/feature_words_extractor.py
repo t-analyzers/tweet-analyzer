@@ -120,11 +120,23 @@ def get_tweets_data(condition):
     """
     date_format = '%Y/%m/%d %H:%M:%S'
     results_list = []
-    for tweet in tweet_collection.find(condition,{'created_datetime': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
-        #retweet以外を取り出す。 
-        if 'retweeted_status' not in tweet:
-#        if True:
-            result = {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
+    for tweet in tweet_collection.find(condition,{'created_at': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
+
+        retweet_flag = False
+        #retweetは元のツイートを取り出す
+        if 'retweeted_status' in tweet:
+            tweet = tweet['retweeted_status']
+            retweet_flag = True
+                    
+        exist_flag = False
+        for t in results_list :
+            if(t['id']==tweet['id_str'] and t['user.screen_name']==tweet['user']['screen_name']):
+                exist_flag = True
+                break
+        #すでにresult_listに含まれているツイートは処理しない
+        if exist_flag == False:
+#            result = {'created_datetime': date_to_japan_time(tweet['created_datetime']).strftime(date_format),
+            result = {'created_datetime': str_to_date_jp(tweet["created_at"]).strftime(date_format),
               'retweet_count': tweet['retweet_count'], 'id': tweet['id_str'],
               'user.screen_name': tweet['user']['screen_name'], 'text': tweet['text']}
             
@@ -136,11 +148,15 @@ def get_tweets_data(condition):
                     media_url = media.get('media_url')
                     if media_url != None: media_urls.append(media_url)
                 result['media_urls'] = ",".join(media_urls)
+                #result['media_urls'] = media_urls
+            
+            #リツイートの場合は印をつける
+            if retweet_flag == True: result['retweet'] = 1
             
             results_list.append(result)
 
     for r in results_list :
-        r['nouns'] =  split_text_only_noun(util.get_text_eliminated_some_pattern_words(r['text']))
+#        r['nouns'] =  split_text_only_noun(util.get_text_eliminated_some_pattern_words(r['text']))
         r['PrintID'] = ",".join(util.get_nps_printid(r['text']))
 
     #ツイートの作成日(created_datetime)で昇順ソートする
