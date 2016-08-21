@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import re
 
 import numpy as np
@@ -5,10 +8,6 @@ import numpy as np
 from mecab_analyzer import MecabAnalyzer, Morpheme
 from shared.datetime_extentions import *
 from shared.decorators import trace
-
-
-# coding=utf-8
-# write code...
 
 
 class PnDictScorer(MecabAnalyzer):

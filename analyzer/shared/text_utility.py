@@ -1,7 +1,7 @@
-import re
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-# coding=utf-8
-# write code...
+import re
 
 TWITTER_ACCOUNT_PATTERN = r"@(.+?)\s"
 URL_PATTERN = r"http(.+?)($|\s)"

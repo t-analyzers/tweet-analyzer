@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 from sklearn import svm
 from sklearn.feature_extraction.text import CountVectorizer
@@ -6,10 +9,6 @@ from sklearn.grid_search import GridSearchCV
 from mecab_analyzer import MecabAnalyzer
 from shared.datetime_extentions import *
 from shared.decorators import trace
-
-
-# coding=utf-8
-# write code...
 
 
 class SvmScorer(MecabAnalyzer):

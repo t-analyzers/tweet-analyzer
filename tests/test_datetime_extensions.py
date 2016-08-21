@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 import unittest
@@ -5,21 +8,23 @@ from datetime import datetime
 import time
 import pytz
 
-# パスに追加することで、importできるようにする。
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import analyzer.shared.datetime_extentions as ext
 
-# coding=utf-8
-# write code...
-
 
 class TestDatetimeExtensions(unittest.TestCase):
+
     def setUp(self):
         pass
 
     def tearDown(self):
         pass
+
+    def test_utc_str_to_date(self):
+        utc_date = ext.utc_str_to_date('Sun Jul 03 09:50:22 +0000 2016')
+        expected = datetime(2016, 7, 3, hour=9, minute=50, second=22)
+        self.assertEqual(utc_date, expected)
 
     def test_now_unix_time(self):
         unix_time = ext.now_unix_time()

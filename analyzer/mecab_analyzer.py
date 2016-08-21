@@ -1,10 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import MeCab
 
 import config as config
 from base_analyzer import BaseAnalyzer
 
-# coding=utf-8
-# write code...
 # 参考サイト：https://taku910.github.io/mecab/
 
 

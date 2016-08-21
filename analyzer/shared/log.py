@@ -1,9 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
-
-# coding=utf-8
-# write code...
 
 
 class Log:

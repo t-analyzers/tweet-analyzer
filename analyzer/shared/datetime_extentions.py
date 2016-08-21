@@ -1,9 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from datetime import *
 import time
 import pytz
-
-# coding=utf-8
-# write code...
 
 """
 日付を表す文字列とdatetimeオブジェクトを相互に変換するためのユーティリティメソッド
@@ -11,12 +11,21 @@ Twitter APIで扱う文字列の形式を対象としている
 """
 
 
-def now_unix_time():
+def now_unix_time() -> float:
     """
     現在時刻をUNIX Timeで返す
-    :return:
+    :return: UNIX Time
     """
     return time.mktime(datetime.now().timetuple())
+
+
+def utc_str_to_date(str_date: str) -> datetime:
+    """
+    日付の文字列をUTC時刻のdatetimeオブジェクトに変換する
+    :param str_date: 日付を表す文字列 EX:'Sun Jul 03 09:50:22 +0000 2016'
+    :return: datetimeオブジェクト（タイムゾーンはUTC）
+    """
+    return datetime.strptime(str_date, '%a %b %d %H:%M:%S +0000 %Y')
 
 
 def str_to_date_jp(str_date: str) -> datetime:

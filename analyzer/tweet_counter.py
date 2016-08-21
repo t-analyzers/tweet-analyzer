@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from collections import defaultdict
 
 import pandas as pd
@@ -6,9 +9,6 @@ from pandas import DataFrame, Series
 from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
 from shared.decorators import trace
-
-# coding=utf-8
-# write code...
 
 
 class TweetCounter(BaseAnalyzer):

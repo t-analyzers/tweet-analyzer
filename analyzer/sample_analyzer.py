@@ -1,11 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from pandas import DataFrame
 
 from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
 from shared.decorators import trace
-
-# coding=utf-8
-# write code...
 
 
 class SampleAnalyzer(BaseAnalyzer):

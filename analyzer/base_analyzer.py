@@ -1,10 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from shared.log import Log
 import pymongo
 import config as config
-
-
-# coding=utf-8
-# write code...
 
 
 class BaseAnalyzer(object):

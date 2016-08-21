@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
@@ -6,10 +9,6 @@ import config as config
 from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
 from shared.decorators import trace
-
-
-# coding=utf-8
-# write code...
 
 
 class TweetArchiver(BaseAnalyzer):

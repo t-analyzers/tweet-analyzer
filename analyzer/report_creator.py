@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import datetime
 
 import pandas as pd
@@ -7,9 +10,6 @@ from shared.decorators import trace
 from shared.log import Log
 from sample_analyzer import SampleAnalyzer
 from tweet_counter import TweetCounter
-
-# coding=utf-8
-# write code...
 
 
 class ReportCreator(object):
@@ -66,10 +66,11 @@ class ReportCreator(object):
                 keywords = yaml.load(file)
 
             # つぶやきの内容を書き込み（さらにキーワードで絞込）
-            [self._write_worksheet(excel_writer,
-                                   df[(df['text'].str.contains(keyword))].
-                                   sort_values(by='created_datetime', ascending=False).reset_index(drop=True),
-                                   '「{0}」を含むつぶやき'.format(keyword)) for keyword in keywords]
+            for keyword in keywords:
+                self._write_worksheet(excel_writer,
+                                      df[(df['text'].str.contains(keyword))].
+                                      sort_values(by='created_datetime', ascending=False).reset_index(drop=True),
+                                      '「{0}」を含むつぶやき'.format(keyword))
 
             spam_df = sample_analyzer.get_text_data({'spam': {'$eq': True},
                                                      'created_datetime': {'$gte': start_time, '$lte': end_time}})

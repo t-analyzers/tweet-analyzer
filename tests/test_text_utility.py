@@ -1,17 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 import unittest
 
-# パスに追加することで、importできるようにする。
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import analyzer.shared.text_utility as util
 
-# coding=utf-8
-# write code...
-
 
 class TestTextUtility(unittest.TestCase):
+
     def setUp(self):
         pass
 

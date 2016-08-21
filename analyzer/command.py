@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 from _datetime import *
 
@@ -7,10 +10,6 @@ from archiver import TweetArchiver
 from report_creator import ReportCreator
 from spam_detector import SpamDetector
 from pn_dict_scorer import PnDictScorer
-
-
-# coding=utf-8
-# write code...
 
 
 @click.group()
@@ -25,12 +24,12 @@ def archive_tweets():
 
     today = datetime.today()
     tomorrow = today + timedelta(days=1)
-    # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな14日間の範囲で検索する。
-    two_weeks_ago = tomorrow - timedelta(days=14)
+    # Twitter APIでは最大7-10日間分くらい検索可能なので、それよりも広めな10日間の範囲で検索する。
+    ten_days_ago = tomorrow - timedelta(days=10)
     # スパムの検出
-    SpamDetector().divide_spam_tweet(start_datetime=two_weeks_ago, end_datetime=tomorrow, limit_tweet_count=60)
+    SpamDetector().divide_spam_tweet(start_datetime=ten_days_ago, end_datetime=tomorrow, limit_tweet_count=60)
     # 形態素解析を行い、極性値を算出する
-    PnDictScorer().update_negaposi(start_datetime=two_weeks_ago, end_datetime=tomorrow)
+    PnDictScorer().update_negaposi(start_datetime=ten_days_ago, end_datetime=tomorrow)
 
 
 @cmd.command('e', short_help=': create the excel format of the report.')
