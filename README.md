@@ -35,6 +35,16 @@ Twitter APIで取得したつぶやき（JSON）をMongoDBに格納します。
 MongoDBをインストールして起動しておく。  
 ホスト名やポート番号は、config.pyで設定しているので必要に応じて変更する。  
 
+- インデックスの追加  
+mongoコマンドでコンソールを開き、インデックスを追加してください。    
+created_datetimeキーに対して、基本的な降順インデックスを追加するコマンドは下記です。   
+インデックスについての詳細は、[公式ページ](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#db.collection.createIndex)を参照してください。  
+
+```
+use twitter-archive
+db.tweets.createIndex({created_datetime: -1})
+```
+
 #### Mecabのユーザ辞書
 ※本項目はオプションです。実施しなくてもスクリプトは動作します。  
 一部のスクリプトで形態素解析を行っていますが、  
@@ -115,6 +125,16 @@ wordcloud_YYYYMMDD.png
 * numpy
 
 なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。
+
+### ユニットテスト
+ユニットテストの実装には標準モジュールの[unittest](http://docs.python.jp/3/library/unittest.html)を使用しています。  
+テストランナーには、[pytest](http://pytest.org/latest-ja/)が便利なのでインストールしてください。  
+もちろんpytestでユニットテストを実装しても構いません。  
+ルートディレクトリで下記コマンドを実行すると、テストを実行できます。  
+詳細なオプションについては公式サイトを参照してください。  
+```
+py.test
+```
 
 ### Jupyter Notebook
 Anacondaを使っていればインストール済です。  
