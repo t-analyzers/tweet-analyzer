@@ -7,7 +7,9 @@ archve.pyで取り込んだtweetsを分析する。
  
 ・出力ファイル：
 　- 特徴語データ: feature_words_YYYYMMDD-YYYYMMDD.json
-     [{"date": 日付, "tweet_count":ツイート数, "retweet_count":リツイート数,"feature_words":[特徴語リスト]},...] ※dateでソート
+     [{"date": 日付, "tweet_count":ツイート数, "retweet_count":リツイート数,
+       "posi_count":ポジティブツイート数, "nega_count":ネガティブツイート数,
+       "feature_words":[特徴語リスト]},...] ※dateでソート
 　- 日別ツイートデータ: tweets_YYYYMMDD.json
      [{'created_datetime': 日時,'retweet_count':収集時点のリツイート数, 
        'id': ツイートのID(文字列形式:id_str), user.screen_name': ツイッターアカウント名, 'text':ツイート本文, 'media_urls'(option):画像URL, 
@@ -76,6 +78,8 @@ def _get_feature_words_from_tweets_text(condition, date_format, extract_feature_
     
     tweets_count_dict = defaultdict(int) #集計時間単位（以下、わかりやすくするために「日別」とする）のtweet件数
     retweets_count_dict = defaultdict(int)
+    nega_count_dict = defaultdict(int)
+    posi_count_dict = defaultdict(int)
     nouns_dict = defaultdict(str) #「日別」のtweet textの名詞を連結した文字列
     words_dict = defaultdict(str)
     
@@ -83,7 +87,7 @@ def _get_feature_words_from_tweets_text(condition, date_format, extract_feature_
     target_time_unit_nouns =[] #date_formatで指定した年月日時ごとのtweetに含まれる名詞を連結した文字列
     
     #tweetsの読み込み（mongoDBからのfind時のsortはメモリ不足でエラーになるため、ファイル出力前にこのプログラムでソートする）
-    for tweet in tweet_collection.find(condition, {'_id': 1, 'created_datetime': 1,'retweeted_status': 1, 'text': 1}):
+    for tweet in tweet_collection.find(condition, {'_id': 1, 'created_datetime': 1,'retweeted_status': 1, 'text':1, 'negaposi':1}):
         str_date = dutil.date_to_japan_time(tweet['created_datetime']).strftime(date_format)
         
         #初めて処理する日付の場合はtarget_time_unitsに格納する
@@ -96,6 +100,14 @@ def _get_feature_words_from_tweets_text(condition, date_format, extract_feature_
         #そのツイートがretweetの場合はカウントアップする
         if 'retweeted_status' in tweet:
             retweets_count_dict[str_date] += 1
+            
+        #そのツイートがネガまはたポジ場合はカウントアップする
+        if 'negaposi' in tweet:
+            negaposi = tweet["negaposi"]
+            if negaposi == 1 : 
+                posi_count_dict[str_date] += 1
+            elif negaposi == -1 :
+                nega_count_dict[str_date] += 1
         
         #形態素解析で名詞を抽出して文字列として連結する
         nouns_dict[str_date] += " " + _split_text_only_noun(util.get_text_eliminated_some_pattern_words(tweet['text']))
@@ -128,7 +140,10 @@ def _get_feature_words_from_tweets_text(condition, date_format, extract_feature_
 
     results_list =[]
     for i in range(0, len(target_time_units)) :
-        result = {"date": target_time_units[i], "tweets_count": tweets_count_dict[target_time_units[i]], "retweets_count": retweets_count_dict[target_time_units[i]], "feature_words": words_dict[target_time_units[i]]}
+        result = {"date": target_time_units[i], 
+                  "tweets_count": tweets_count_dict[target_time_units[i]], "retweets_count": retweets_count_dict[target_time_units[i]],
+                  "posi_count": posi_count_dict[target_time_units[i]], "nega_count": nega_count_dict[target_time_units[i]],
+                  "feature_words": words_dict[target_time_units[i]]}
         results_list.append(result)
     
     print(results_list)
@@ -172,7 +187,7 @@ def create_tweets_files(output_folder_path, start_date, end_date):
         if os.path.exists(file_path) == False:
             file = open(file_path,'w')
             condition = {'created_datetime': {'$gte': date, '$lt': date + datetime.timedelta(days=1)}}
-            json.dump(_get_tweets_data(condition),file)
+            json.dump(_get_tweets_data(condition),file, indent=0)
             file.close()
             print(file_path)
 
@@ -185,7 +200,9 @@ def _get_tweets_data(condition):
 
     #ツイートを取得しcreated_datetimeでソート
     tweets_tmp = []
-    for tweet in tweet_collection.find(condition,{'created_datetime':1 ,'created_at': 1, 'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1, 'retweeted_status': 1}):
+    for tweet in tweet_collection.find(condition,{'created_datetime':1 ,'created_at': 1, 
+                                                  'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1,
+                                                  'retweeted_status': 1, 'negaposi':1}):
         tweets_tmp.append(tweet)
     
     tweets = sorted(tweets_tmp,key=lambda x:x["created_datetime"])
@@ -221,12 +238,16 @@ def _get_tweets_data(condition):
                 result['media_urls'] = ",".join(media_urls)
                 #result['media_urls'] = media_urls  ##media_urlsが複数入っているツイートは見たことないが、複数入る前提でリストにしておくのが良さそう。
             
+            #プリント予約番号が抽出できたら保存する。
             printids = util.get_nps_printid(result['text'])
-            if len(printids) > 0:
-                result['PrintID'] = ",".join(printids)
+            if len(printids) > 0: result['PrintID'] = ",".join(printids)
                 
             #リツイートの場合は印をつける
             if retweet_flag == True: result['retweet'] = 1
+            
+            #ネガポジの要素を含む場合はその値を保存する
+            negaposi = tweet.get('negaposi')
+            if negaposi != None: result['negaposi'] = negaposi
             
             results_list.append(result)
 
