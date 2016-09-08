@@ -94,19 +94,31 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 時間ごと、日ごと、時間帯別のつぶやき数を集計します。  
 などなど。  
 
-### pn_dict_scorer.py
+#### pn_dict_scorer.py
 現状は、単語感情極性対応を用いて文章（つぶやき）の極性値をネガポジスコアとして算出します。  
 
-### svm_scorer.py
-サポートベクターマシンを使ってネガポジ判定を行います。  
-conf/sample_tweets.tsvを教師データとしています。  
+#### svm_scorer.py
+サポートベクターマシンを使ってネガポジ判定を行います。
+conf/sample_tweets.tsvを教師データとしています。
 
-### feature_words_extractor.py
+#### svm_scorer_using_metadata.py
+サポートベクターマシンを使ってネガポジ判定を行います。
+create_learning_data_using_metadata.pyで作成した教師データを使用します。
+接続先のMongoDBの情報などはconfig_svm_np.pyで設定します。
+なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（最終回： 機械学習によるテキストマイニング）](https://datumstudio.jp/backstage/662 "機械学習によるテキストマイニング")を参考に作成しました。
+
+#### create_learning_data_using_metadata.py
+metadata株式会社の「高精度ネガポジAPI」を使用してツイート本文のネガポジを判定し、教師データを作成します。
+ツイート本文の取得先及び教師データの格納先はMongoDBです。
+APIキーやMongoDBの情報はconfig_metadata_api.pyで設定します。
+
+#### feature_words_extractor.py
 archive.pyで取り込んだツイートをMeCabを使って形態素解析を行い名詞を抽出し、TF-IDFモデルで日別の特徴語を抽出します。
 抽出結果はJSON形式と画像で以下のようにファイルに出力します。
 
 * 特徴語データ:
-feature_words_YYYYMMDD-YYYYMMDD.json:[{"date": 日付, "tweet_count":ツイート数, "retweet_count":リツイート数,"feature_words":[特徴語リスト]},...] ※dateでソート
+feature_words_YYYYMMDD-YYYYMMDD.json:[{"date": 日付, "tweet_count":ツイート数, "retweet_count":リツイート数,
+"posi_count":ポジティブツイート数, "nega_count":ネガティブツイート数,"feature_words":[特徴語リスト]},...] ※dateでソート
 * 特徴語データファイルリスト:
 filelist-feature_words.json: 特徴語データ出力先フォルダ内の特徴語データファイルのリスト（降順）。"feature_words_"で始まるファイルが対象。
 * 日別ツイートデータ:
