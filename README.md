@@ -107,6 +107,13 @@ create_learning_data_using_metadata.pyで作成した教師データを使用し
 接続先のMongoDBの情報などはconfig_svm_np.pyで設定します。
 なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（最終回： 機械学習によるテキストマイニング）](https://datumstudio.jp/backstage/662 "機械学習によるテキストマイニング")を参考に作成しました。
 
+教師データのコレクションをエクスポートしたファイルは以下に格納しています：
+/out/tweets-metadata.jbos
+このフォルダ(out)へ移動し、以下のコマンドで上書きリストアできます。
+```
+mongorestore -drop -d twitter-archive -c tweets-metadata  ./tweets-metadata.bson
+```
+
 #### create_learning_data_using_metadata.py
 metadata株式会社の「高精度ネガポジAPI」を使用してツイート本文のネガポジを判定し、教師データを作成します。
 ツイート本文の取得先及び教師データの格納先はMongoDBです。

@@ -58,5 +58,3 @@ docs/_build/
 target/
 analyzer/.ipynb_checkpoints
 /.idea
-
-out/*.*
