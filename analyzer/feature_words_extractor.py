@@ -294,7 +294,7 @@ def _save_word_cloud_img(frequencies, file_path):
     wc.generate_from_frequencies(frequencies)
     wc.to_file(file_path)
 
-def create_filelist(folder_path, target_filename_regexp, output_filename):
+def create_filelist(folder_path, target_filename_regexp, output_filename, count=7):
     """
     指定したフォルダパス内の正規表現にマッチするファイル名のリストファイルを作成する。
     :param folder_path: ファイル名を取得するフォルダのパス。また、リストファイルの保存先。
@@ -303,10 +303,11 @@ def create_filelist(folder_path, target_filename_regexp, output_filename):
     """
     files_list = [relpath(x, folder_path) for x in glob(join(folder_path, target_filename_regexp))]
     files_list.sort(reverse=True)
+    files_list_out = files_list[:count]
     output_file_path = folder_path + output_filename 
 
     output_file = open(output_file_path,'w')
-    json.dump(files_list,output_file)
+    json.dump(files_list_out,output_file)
     output_file.close()
 
 ## main
