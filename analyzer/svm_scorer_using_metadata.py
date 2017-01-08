@@ -8,13 +8,10 @@ import pymongo
 import config_svm_np
 import datetime
 from pytz import timezone
-#import json
-#import os.path
-#from os.path import join, relpath
-#import copy
+import os.path
+import pickle
 
-#import urllib.request, urllib.parse
-#from shared.datetime_extentions import dutil
+import shared.datetime_extentions as dutil
 import shared.text_utility as util
 
 #形態素解析のライブラリ
@@ -23,6 +20,7 @@ import MeCab
 from sklearn import svm
 from sklearn.grid_search import GridSearchCV
 from sklearn.feature_extraction.text import CountVectorizer
+
 
 import pandas as pd
 
@@ -48,7 +46,7 @@ class SvmScorerUseMetadataLearingData():
         :return:  {"vocablary":{"p": 語彙リスト（ポジ）, "n": 語彙リスト（ネガ）, "a": 語彙リスト（ALL）}, 
                    "svm_model":{"p": SVMモデル(ポジ), "n": SVMモデル(ネガ), "n": SVMモデル(ALL)}}
         '''
-        
+
         # Positive or NOT Positive(2値)
         tweets_wakati_p = []
         tweets_label_p = []
@@ -66,26 +64,28 @@ class SvmScorerUseMetadataLearingData():
         print("[INFO] 分かち書き")
         for tweet in sample_collection.find({},{'text': 1, 'additional_info': 1}):
             negaposi_int = tweet['additional_info']['metadata_api']['negaposi_int']
-            
+
+            tweet['wakati'] = self._wakati(util.get_text_eliminated_some_pattern_words(tweet['text']))
+            tweet['label'] = negaposi_int    
+
+            tweets_wakati_a.append(tweet['wakati'])
+            tweets_label_a.append(tweet['label'])
+
             # negaposi_int = 1 or 0のデータをポジティブ判定の教師データとして使用する
             if negaposi_int >= 0:
-                tweet['wakati'] = self._wakati(util.get_text_eliminated_some_pattern_words(tweet['text']))
-                tweet['label'] = negaposi_int
                 tweets_wakati_p.append(tweet['wakati'])
                 tweets_label_p.append(tweet['label'])
         
             # negaposi_int = -1 or 0のデータをネガティブ判定の教師データとして使用する
             if negaposi_int <= 0:
-                tweet['wakati'] = self._wakati(util.get_text_eliminated_some_pattern_words(tweet['text']))
-                tweet['label'] = negaposi_int
                 tweets_wakati_n.append(tweet['wakati'])
                 tweets_label_n.append(tweet['label'])
-    
-            tweets_wakati_a.append(tweet['wakati'])
-            tweets_label_a.append(tweet['label'])
             
         print("[INFO] 素性ベクトル作成")
         count_vectorizer = CountVectorizer()
+        feature_vectors_p = count_vectorizer.fit_transform(tweets_wakati_p)
+        vocabulary_p = count_vectorizer.get_feature_names()
+        
         feature_vectors_p = count_vectorizer.fit_transform(tweets_wakati_p)
         vocabulary_p = count_vectorizer.get_feature_names()
         
@@ -114,12 +114,10 @@ class SvmScorerUseMetadataLearingData():
         #ポジティブ判定
         gscv.fit(feature_vectors_p, tweets_label_p)
         svm_model_p = gscv.best_estimator_  # 最も精度の良かったモデル
-        #print(svm_model_p)
         
         #ネガティブ判定
         gscv.fit(feature_vectors_n, tweets_label_n)
         svm_model_n = gscv.best_estimator_  # 最も精度の良かったモデル
-        #print(svm_model_n)
         
         #ネガポジ判定
         gscv.fit(feature_vectors_a, tweets_label_a)
@@ -127,8 +125,14 @@ class SvmScorerUseMetadataLearingData():
         
         #3つのモデルをグローバル変数に格納。
         self.svm_models_dict = {
-                "vocabulary":{"p": vocabulary_p, "n": vocabulary_n, "a": vocabulary_a}, 
-                "svm_model":{"p": svm_model_p, "n": svm_model_n, "a": svm_model_a}
+                "vocabulary":{
+                    "p": vocabulary_p, 
+                    "n": vocabulary_n, 
+                    "a": vocabulary_a}, 
+                "svm_model":{
+                    "p": svm_model_p, 
+                    "n": svm_model_n, 
+                    "a": svm_model_a}
                 }      
         
         return self.svm_models_dict
@@ -217,7 +221,8 @@ class SvmScorerUseMetadataLearingData():
         if is_sample == True: print("期待値：[0,0,0,0,0,-1,-1,-1,-1,-1,1,1,1,1,1]")
         print(negaposi_all_class)
         
-        return negaposi_class
+ #      return negaposi_class
+        return negaposi_all_class
         
     def update_negaposi(self, start_datetime: datetime, end_datetime: datetime):
         '''
@@ -258,9 +263,21 @@ class SvmScorerUseMetadataLearingData():
 if __name__ == "__main__" :
     
     SvmScorer = SvmScorerUseMetadataLearingData()
-    #教師データから学習
-    svm_models_dict = SvmScorer.supervised_learning()
     
+    model_file_path = config_svm_np.SVM_MODEL_FILE_PATH
+    
+    if os.path.exists(model_file_path) == True:
+        print("・学習済みのモデル：" + model_file_path)
+        with open(model_file_path, mode='rb') as file:
+            SvmScorer.svm_models_dict = pickle.load(file)
+    else:
+        #教師データから学習
+        print("・学習開始：　"+ dutil.date_to_str(datetime.datetime.now()))
+        svm_models_dict = SvmScorer.supervised_learning()
+        print("・学習終了：　"+ dutil.date_to_str(datetime.datetime.now()))
+        with open(model_file_path,'wb') as file:
+            pickle.dump(svm_models_dict,file)
+        
     # tweetにネガポジ判定結果を付与(update)  7日分遡って更新する
     d = datetime.datetime.now()
     date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
