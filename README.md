@@ -145,6 +145,12 @@ wordcloud_YYYYMMDD.png
 
 なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。
 
+#### image_analyzer.py
+画像を分析する機能を実装。引数を指定して機能を実行する。
+* hash：　実行日前日1日分のツイートから画像を取得し、予め特定フォルダに格納しておいた画像と類似している画像のツイートに {"hash_match": "(一致した画像ファイル名（拡張子なし）)"}を付加する。
+
+
+
 ### ユニットテスト
 ユニットテストの実装には標準モジュールの[unittest](http://docs.python.jp/3/library/unittest.html)を使用しています。  
 テストランナーには、[pytest](http://pytest.org/latest-ja/)が便利なのでインストールしてください。  
