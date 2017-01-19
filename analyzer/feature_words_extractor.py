@@ -26,7 +26,7 @@ archve.pyで取り込んだtweetsを分析する。
 from collections import defaultdict
 import pymongo
 import shared.datetime_extentions as dutil
-import config_feature_words
+import conf.config_feature_words as config
 import datetime
 from pytz import timezone
 import json
@@ -41,15 +41,15 @@ import MeCab
 #TF-IDFフィルタのクラス
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-client = pymongo.MongoClient(config_feature_words.HOST, config_feature_words.PORT)
-tweet_collection = client[config_feature_words.DB_NAME][config_feature_words.COLLECTION_NAME]
+client = pymongo.MongoClient(config.HOST, config.PORT)
+tweet_collection = client[config.DB_NAME][config.COLLECTION_NAME]
 
 #分析するデータの日数
-ANALYZE_DAYS =config_feature_words.ANALYZE_DAYS
+ANALYZE_DAYS =config.ANALYZE_DAYS
 #抽出単語数
-EXTRACT_FEATURE_WORDS_MAX = config_feature_words.EXTRACT_FEATURE_WORDS_MAX
+EXTRACT_FEATURE_WORDS_MAX = config.EXTRACT_FEATURE_WORDS_MAX
 #TF-IDFパラメータ：　除外する合計出現回数
-TFIDF_EXCLUDE_APPEARANCE = config_feature_words.TFIDF_EXCLUDE_APPEARANCE
+TFIDF_EXCLUDE_APPEARANCE = config.TFIDF_EXCLUDE_APPEARANCE
 
 def create_tweets_analyze_result_file(output_folder_path, start_date, end_date):
     """
@@ -202,7 +202,7 @@ def _get_tweets_data(condition):
     tweets_tmp = []
     for tweet in tweet_collection.find(condition,{'created_datetime':1 ,'created_at': 1, 
                                                   'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1,
-                                                  'retweeted_status': 1, 'negaposi':1}):
+                                                  'retweeted_status': 1, 'negaposi':1, 'hash_match':1}):
         tweets_tmp.append(tweet)
     
     tweets = sorted(tweets_tmp,key=lambda x:x["created_datetime"])
@@ -248,6 +248,10 @@ def _get_tweets_data(condition):
             #ネガポジの要素を含む場合はその値を保存する
             negaposi = tweet.get('negaposi')
             if negaposi != None: result['negaposi'] = negaposi
+                
+            #一致した画像のラベルを保存する
+            hash_match = tweet.get('hash_match')
+            if hash_match != None: result['hash_match'] = hash_match
             
             results_list.append(result)
 
@@ -289,7 +293,7 @@ def _save_word_cloud_img(frequencies, file_path):
     :param file_path: 画像ファイルのパス
     """
     # 日本語フォントのパスが正しく設定されている必要がある。
-    font_path = config_feature_words.JAPANESE_FONT_PATH
+    font_path = config.JAPANESE_FONT_PATH
     wc = WordCloud(background_color='white', max_font_size=320, font_path=font_path, width=900, height=500)
     wc.generate_from_frequencies(frequencies)
     wc.to_file(file_path)
@@ -322,7 +326,7 @@ if __name__ == '__main__':
     print(end_date)
 
     #出力先パスを指定        
-    output_folder_path = config_feature_words.OUTPUT_FOLDER_PATH
+    output_folder_path = config.OUTPUT_FOLDER_PATH
     print("[info] 出力先パス： " + output_folder_path)
     
     #ツイート分析結果をファイルに保存する

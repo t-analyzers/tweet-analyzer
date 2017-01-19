@@ -3,7 +3,7 @@
 
 from shared.log import Log
 import pymongo
-import config as config
+import conf.config_archiver as config
 
 
 class BaseAnalyzer(object):

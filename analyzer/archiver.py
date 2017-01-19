@@ -5,7 +5,7 @@ import yaml
 from tweepy import API, OAuthHandler, TweepError
 from tweepy.parsers import JSONParser
 
-import config as config
+import conf.config_archiver as config
 from base_analyzer import BaseAnalyzer
 from shared.datetime_extentions import *
 from shared.decorators import trace

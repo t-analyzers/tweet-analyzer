@@ -5,7 +5,7 @@ Created on Thu Aug 11 15:29:23 2016
 @author: hitoshi
 """
 import pymongo
-import config_svm_np
+import conf.config_svm_np as config
 import datetime
 from pytz import timezone
 import os.path
@@ -28,7 +28,7 @@ import pandas as pd
 class SvmScorerUseMetadataLearingData():
 
     #connection mongoDB to get sample-tweets
-    client = pymongo.MongoClient(config_svm_np.HOST, config_svm_np.PORT)
+    client = pymongo.MongoClient(config.HOST, config.PORT)
     
     #SVMでの学習結果を格納するグローバル変数
     svm_models_dict = {}
@@ -59,7 +59,7 @@ class SvmScorerUseMetadataLearingData():
         tweets_wakati_a = []
         tweets_label_a = []
         
-        sample_collection = self.client[config_svm_np.DB_NAME][config_svm_np.SAMPLE_COLLECTION_NAME]
+        sample_collection = self.client[config.DB_NAME][config.SAMPLE_COLLECTION_NAME]
         
         print("[INFO] 分かち書き")
         for tweet in sample_collection.find({},{'text': 1, 'additional_info': 1}):
@@ -233,7 +233,7 @@ class SvmScorerUseMetadataLearingData():
         search_condition = {'retweeted_status': {'$eq': None}, 'spam': {'$eq': None},
                             'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
         
-        tweets = self.client[config_svm_np.DB_NAME][config_svm_np.COLLECTION_NAME]
+        tweets = self.client[config.DB_NAME][config.COLLECTION_NAME]
         for tweet in tweets.find(search_condition, {'text': 1}):
             score = self.svm_classifer([tweet["text"]])[0] #型: numpy.int64
             print(tweet["text"])
@@ -264,7 +264,7 @@ if __name__ == "__main__" :
     
     SvmScorer = SvmScorerUseMetadataLearingData()
     
-    model_file_path = config_svm_np.SVM_MODEL_FILE_PATH
+    model_file_path = config.SVM_MODEL_FILE_PATH
     
     if os.path.exists(model_file_path) == True:
         print("・学習済みのモデル：" + model_file_path)
