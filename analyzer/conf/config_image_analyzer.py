@@ -9,9 +9,8 @@ image_analyzer.py用の設定ファイル
 
 ## mongodbの設定
 DB_HOST = "localhost"
-#DB_HOST = "192.168.11.3"
 DB_PORT = 27017
-DB_DB_NAME = "twitter-archive"
+DB_NAME = "twitter-archive"
 DB_TWEETS_COLLECTION_NAME = "tweets"
 DB_LABELS_COLLECTION_NAME = "img_labels"
 

@@ -16,9 +16,9 @@ import pymongo
 
 import urllib.request
 from urllib.error import URLError
-#import json
+import json
 
-#import base64
+import base64
 
 #from sklearn import cross_validation
 from PIL import Image
@@ -38,7 +38,7 @@ class AverageHash():
     """
 
     #connection mongoDB
-    _collection = pymongo.MongoClient(config.DB_HOST, config.DB_PORT)
+    #client = pymongo.MongoClient(config.DB_HOST, config.DB_PORT)
 
     def __int__(self):
         """
@@ -130,6 +130,7 @@ class AverageHash():
 
 
         """
+        dao = DatabaseUtilities()
         src = self.get_average_hash(img_file)
         for check_file in self._enum_all_files(config.CHECK_IMG_FOLDER):
             dst = self.get_average_hash_and_make_cache(check_file)
@@ -144,33 +145,10 @@ class AverageHash():
                 
                 search_condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}, 
                                     'entities.media.media_url': img_url}
-                tweets = self._collection[config.DB_DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
-                tweets.update_many(search_condition, {'$set': {'hash_match': matched_file_name}})
-
-    def get_img_url_list(self, start_datetime: datetime, end_datetime: datetime):
-        """
-        画像のURLをもつtweetをDBから抽出する。
-        :param start_datetime,end_datetime: 検索する日付の範囲
-        :return: 画像のURLをもつtweetのリスト
-        """
-        search_condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
-        
-        tweets = self._collection[config.DB_DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
-        results = []
-        for tweet in tweets.find(search_condition, {'id_str': 1, 'user': 1, 'entities':1}):
-            #media_urlを持つtweetにはそのURLを保存する
-            media_elements = tweet.get('entities').get('media')
-            if media_elements != None:
-                for media in media_elements:
-                    media_url = media.get('media_url')
-                    if media_url != None: 
-                        result = {}
-                        result["url"] = media_url
-                        result["username"] = tweet['user']['screen_name']    
-                        result["id_str"] = tweet['id_str']
-                        results.append(result)
-        
-            return results
+                dao.update_many(search_condition, {'hash_match': matched_file_name})
+#                tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
+#                tweets.update_many(search_condition, {'$set': {'hash_match': matched_file_name}})
+                                    
 
 class CNNImageAnalyzer():
     """
@@ -236,7 +214,117 @@ class NetworkUtilities():
         
         return result
 
+    def get_img_labels_using_GCV(self, file_path):
+        
+        url = "https://vision.googleapis.com/v1/images:annotate?key="+config.GCP_KEY
+        
+        features = [{"type":"LABEL_DETECTION","maxResults":5},{"type":"SAFE_SEARCH_DETECTION","maxResults":1}]
+        #画像ファイルをbase64でencodeして読み込む
+        file = open(file_path, 'rb').read()
+        img64 = base64.b64encode(file).decode('utf-8')
+        
+        # POSTパラメータを設定する
+        req_params = {"requests":
+                [{"image": {"content": img64}, "features": features}]
+            }
+        # POSTパラメータをJSON形式に変形。また、文字コードをUTF-8にする
+        req_params_json = json.dumps(req_params).encode("utf-8")
+        
+        try:
+            request = urllib.request.Request(url, data=req_params_json, 
+                                             method="POST", headers={"Content-Type" : "application/json"})
+            with urllib.request.urlopen(request) as response:
+                response_body = response.read().decode("utf-8")
+                result = json.loads(response_body)["responses"]
+                
+            return {"success": True, "labels": result}
+            
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print('We failed to reach a server.')
+                print('Reason: ', e.reason)
+            elif hasattr(e, 'code'):
+                print('The server couldn\'t fulfill the request.')
+                print('Error code: ', e.code)
+            
+            return {"success": False}
 
+class DatabaseUtilities():
+    """
+    DBアクセス用のユーティリティクラス。
+    """
+
+    #connection mongoDB
+    client = pymongo.MongoClient(config.DB_HOST, config.DB_PORT)
+
+    def __int__(self):
+        """
+        初期化
+        """
+        super().__init__()
+    
+    def get_img_url_list(self, start_datetime: datetime, end_datetime: datetime):
+        """
+        画像のURLをもつtweetをDBから抽出する。
+        :param start_datetime,end_datetime: 検索する日付の範囲
+        :return: 画像のURLをもつtweetのリスト
+        """
+        search_condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}}
+        
+        tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
+        results = []
+        for tweet in tweets.find(search_condition, {'id_str': 1, 'user': 1, 'entities':1}):
+            #media_urlを持つtweetにはそのURLを保存する
+            media_elements = tweet.get('entities').get('media')
+            if media_elements != None:
+                for media in media_elements:
+                    media_url = media.get('media_url')
+                    if media_url != None: 
+                        result = {}
+                        result["url"] = media_url
+                        result["username"] = tweet['user']['screen_name']    
+                        result["id_str"] = tweet['id_str']
+                        results.append(result)
+        
+        return results
+            
+    def exist_check_img_url_in_db(self, url):
+        """
+        指定したURLがDBの教師データ内に存在しているかどうかチェックする
+        :param str url: チェックするURL
+        :retrun: True or False
+        """
+        labels = self.client[config.DB_NAME][config.DB_LABELS_COLLECTION_NAME]
+        results = []
+        for result in labels.find({"url": url}):
+               results.append(result)
+        
+        flag = False
+        
+        if len(results) > 1:  flag = True
+            
+        return flag
+    
+    def update_many(self, condition, key_value):
+        """
+        conditonで指定したドキュメントをアップデートする。
+        :param conditon: アップデート対象の条件
+        :param key_value: セットする値 {"key": value}
+        """
+        tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
+        tweets.update_many(condition, {'$set': key_value})
+    
+    def insert_img_gcvlabels_to_db(self, username, id_str, img_url, gcv_labels):
+        """
+        画像とラベルの情報を教師データとしてDBに追加する。
+        :param str username: twitterアカウント
+        :param str id_str: tweetのid
+        :param str img_url: 画像のURL
+        :param labels_dict: ラベルと値の組み合わせ。GCVの結果を入れることを想定。
+        """
+        labels = self.client[config.DB_NAME][config.DB_LABELS_COLLECTION_NAME]
+        labels.insert_one({"username": username, "id_str": id_str, "url": img_url,
+                           "gcv_labels": gcv_labels})
 if __name__ == "__main__" :
     arg_num = len(sys.argv)
     print(arg_num)
@@ -253,12 +341,14 @@ if __name__ == "__main__" :
     if arg_num <= 2:
         exit
     
+    #ハッシュによる類似画像チェック
     if sys.argv[1] == "hash": 
     
         avhash = AverageHash()  
         nwutil = NetworkUtilities()
+        dao = DatabaseUtilities()
         
-        img_url_list = avhash.get_img_url_list(start_datetime,end_datetime)
+        img_url_list = dao.get_img_url_list(start_datetime,end_datetime)
         #print(img_url_list)
         
         for img_url in img_url_list:
@@ -269,3 +359,28 @@ if __name__ == "__main__" :
             result = nwutil.download_file_if_dont_exist(url, folder_path, filename)
             if result == True:
                 avhash.update_match_hash(url, folder_path+filename, config.DIFF_RATIO, start_datetime,end_datetime)
+                
+    #Goovle Cloud Vision APIを使って教師データを作成
+    if sys.argv[1] == "gcv_labels":
+        
+        nwutil = NetworkUtilities()
+        dao = DatabaseUtilities()
+        
+        img_url_list = dao.get_img_url_list(start_datetime,end_datetime)    
+        
+        for img_url in img_url_list:
+            url = img_url["url"]
+            folder_path = config.DOWNLOAD_IMG_FOLDER  + img_url["username"] + "/"
+            filename = img_url["id_str"] + "_" + img_url["url"].split("/")[-1]
+            
+            # すでにDBにURLが存在している場合はスキップしてリストの次を処理する
+            if dao.exist_check_img_url_in_db(url) : continue           
+            
+            result = nwutil.download_file(url, folder_path, filename)
+            if result == True:
+                result_dic = nwutil.get_img_labels_using_GCV(folder_path+filename)
+            else:
+                continue
+                
+            if result_dic["success"] == True:
+                dao.insert_img_gcvlabels_to_db(img_url["username"], img_url["id_str"], img_url["url"], result_dic["labels"])
