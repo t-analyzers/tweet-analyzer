@@ -53,6 +53,54 @@ db.tweets.createIndex({created_datetime: -1})
 インストール後、analyzer/conf/config.pyの下記項目にインストールパスを設定してください。  
 * MECAB_USER_DICT
 
+#### Tensor Flowのインストールと環境設定
+##### インストール
+```
+pip install --upgrade https://storage.googleapis.com/tensorflow/mac/tensorflow-0.10.0-py3-none-any.whl
+```
+これでインストールできれば良いが、以下のようなエラーメッセージが出た場合は対応が必要。
+```
+Installing collected packages: setuptools, protobuf, numpy, tensorflow
+  Found existing installation: setuptools 20.3
+```
+setuptoolsが古いのでアップデートする。
+
+```
+pip install --upgrade -I setuptools
+```
+##### 環境設定(mac)
+.bashrcに以下を追加：
+```
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT:$PATH"
+eval "$(pyenv init -)"
+```
+
+##### テスト実行
+以下をコマンドラインで実行する。インストールと環境設定が正しくできていない場合はエラーになる。
+```
+> python3
+>>> import tensorflow as tf
+>>> sess = tf.Session()
+>>> hello = tf.constant('Hello')
+>>> sess.run(hello)
+
+実行結果：　b'Hello'
+```
+#### Kerasの設定
+Keras（深層学習用のラッパーライブラリ）は、requirements.txtでインストールされる（はず）。
+使用する深層学習ライブラリとしてTensor Flowを指定する必要がある。
+ホームフォルダにKeras用のフォルダ(~/.keras)を作成し、設定ファイル(keras.json)を作成する。内容は以下の通り。
+```
+{
+    "image_dim_ordering": "tf",
+    "epsilon": 1e-07,
+    "floatx": "float32",
+    "backend": "tensorflow"
+}
+```
+
+
 ### 実行方法
 command.pyが実行用のスクリプトになっています。  
 引数にコマンド名を指定すると処理が開始されます。  

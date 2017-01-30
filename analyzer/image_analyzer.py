@@ -20,14 +20,14 @@ import json
 
 import base64
 
-#from sklearn import cross_validation
+from sklearn import cross_validation
 from PIL import Image
 import numpy as np
 
-## Deep Learning (Keras)
-#from keras.models import Sequential
-#from keras.layers import Convolution2D, MaxPooling2D
-#from keras.layers import Activation, Dropout, Flatten, Dense
+# Deep Learning (Keras)
+from keras.models import Sequential
+from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Activation, Dropout, Flatten, Dense
 
 # 設定ファイル
 import conf.config_image_analyzer as config
@@ -104,20 +104,6 @@ class AverageHash():
                 fname = os.path.join(root, f)
                 if re.search(r'\.(jpg|jpeg|png)$', fname):
                     yield fname
-    
-#    # 画像を検索
-#    def find_image(self, img_file_path, rate):
-#        src = self.get_average_hash(img_file_path)
-#        for fpath in self._enum_all_files(config.CHECK_IMG_FOLDER):
-#            dst = self.get_average_hash_and_make_cache(fpath)
-#            diff_r = self._hamming_dist(src, dst) / 256
-#    
-#            if diff_r < rate:
-#                print("MATCH!  (diff: " + str(diff_r) + ")")
-#                print(" - SRC: " + img_file_path)
-#                print(" - DST: " + fpath)
-#            else:
-#                print("=> unmatch... (diff: " + str(diff_r) + ")")
 
     def update_match_hash(self, img_url, img_file, rate, start_datetime, end_datetime):
         """
@@ -145,9 +131,7 @@ class AverageHash():
                 
                 search_condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}, 
                                     'entities.media.media_url': img_url}
-                dao.update_many(search_condition, {'hash_match': matched_file_name})
-#                tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
-#                tweets.update_many(search_condition, {'$set': {'hash_match': matched_file_name}})
+                dao.update_many(config.DB_TWEETS_COLLECTION_NAME, search_condition, {'hash_match': matched_file_name})
                                     
 
 class CNNImageAnalyzer():
@@ -156,7 +140,150 @@ class CNNImageAnalyzer():
     """
     def __int__(self):
         super().__init__()
+        
+    def make_learning_data(self):
+        """
+        学習用データを使用して学習する
+        """
+        # フォルダごとの画像データを読み込む --- (※2)
+        X = [] # 画像データ
+        Y = [] # ラベルデータ
+        
+        dao = DatabaseUtilities()
+            
+        for f in self.enum_all_files(config.DOWNLOAD_IMG_FOLDER):
+            img = Image.open(f)
+            img = img.convert("RGB") # カラーモードの変更
+            img = img.resize((config.IMG_SIZE, config.IMG_SIZE)) # 画像サイズの変更
+    #        img.thumbnail((image_size, image_size)) # 縦横比を保ったまま画像サイズの変更
+            data = np.asarray(img)
+            
+            fname = f.split("/")[-1]
+            str_id = fname.split("_")[0]
+            uname = f.split("/")[-2]
+            
+            results = []
+            for result in dao.find(config.DB_LABELS_COLLECTION_NAME, {"id_str": str_id, "username": uname}):
+                results.append(result)
+                
+            #DBに存在しない場合はforループの先頭に戻る
+            if len(results) == 0: continue
+    
+            Y1 = [0 for i in range(len(config.ADULT_LABEL))]
+            Y2 = [0.0 for i in range(len(config.CATEGORIES_LABEL))]
+            ##
+            safe_annotations = results[0]['gcv_labels'][0]
+            safe_annotations = safe_annotations.get('safeSearchAnnotation')
+            if safe_annotations == None: continue
+            
+            adult_label = safe_annotations["adult"]
+            for i,ad in enumerate(config.ADULT_LABEL):  
+                if adult_label == ad:
+                    Y1[i] = 1
+                    break
+            
+            ##
+            label_annotations = results[0]['gcv_labels'][0]
+            label_annotations = label_annotations.get('labelAnnotations')
+            if label_annotations == None: continue
+            
+            for label_annotation in label_annotations:
+                label = label_annotation['description']
+                score = label_annotation['score']
+                    
+                for i,cat in enumerate(config.CATEGORIES_LABEL):
+                    if label == cat and score > config.SCORE_UPPER : Y2[i] = score
+            
+            if sum(Y2) > 0:
+                X.append(data)
+                Y.append(Y1+Y2)
+                               
+        X = np.array(X)
+        Y = np.array(Y)
+        
+        # 学習データとテストデータを分ける --- (※3)
+        X_train, X_test, y_train, y_test = \
+            cross_validation.train_test_split(X, Y)
+        xy = (X_train, X_test, y_train, y_test)
+        np.save(config.CNN_FOLDER + config.LEARNING_PACK_FILE, xy)
+        print("ok,", len(Y))    
 
+    # 全てのディレクトリを列挙
+    def enum_all_files(self, path):
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                fname = os.path.join(root, f)
+                if re.search(r'\.(jpg|jpeg|png)$', fname):
+                    yield fname
+        
+    # モデルを構築 --- (※2)
+    def build_model(self, in_shape):
+        model = Sequential()
+        
+        model.add(Convolution2D(32, 3, 3, 
+        	border_mode='same',
+        	input_shape=in_shape))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        
+        model.add(Dropout(0.25))
+        
+        model.add(Convolution2D(64, 3, 3, border_mode='same'))
+        model.add(Activation('relu'))
+        model.add(Convolution2D(64, 3, 3))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        
+        model.add(Dropout(0.25))
+        
+        model.add(Flatten()) 
+        model.add(Dense(512))
+        model.add(Activation('relu'))
+        
+        model.add(Dropout(0.5))
+        
+        model.add(Dense(config.LABEL_NUM))
+        model.add(Activation('softmax'))
+        model.compile(loss='binary_crossentropy',
+        	optimizer='rmsprop',
+        	metrics=['accuracy'])
+        return model
+    
+    # モデルを訓練する --- (※3)
+    def model_train(self, X, y):
+        model = self.build_model(X.shape[1:])
+        model.fit(X, y, batch_size=config.CNN_BATCH, nb_epoch=config.CNN_EPOCH)
+        # モデルを保存する --- (※4)
+        hdf5_file = config.CNN_FOLDER + config.CNN_MODEL_FILE
+        model.save_weights(hdf5_file)
+        return model
+    
+    # モデルを評価する --- (※5)
+    def model_eval(self, model, X, y):
+        score = model.evaluate(X, y)
+        print('loss=', score[0])
+        print('accuracy=', score[1])
+    
+    def predict_img_labels(self, filepath):
+        # 入力画像をNumpyに変換 --- (※2)
+        X = []
+        files = []
+        img = Image.open(filepath)
+        img = img.convert("RGB")
+        img = img.resize((config.IMG_SIZE, config.IMG_SIZE))
+        in_data = np.asarray(img)
+        X.append(in_data)
+        files.append(filepath)
+        X = np.array(X)
+        
+        # CNNのモデルを構築 --- (※3)
+        model = self.build_model(X.shape[1:])
+        model.load_weights(config.CNN_FOLDER + config.CNN_MODEL_FILE)
+        
+        # データを予測 --- (※4)
+        pre = model.predict(X)
+        label_all = config.ADULT_LABEL+config.CATEGORIES_LABEL
+        for i,score in enumerate(pre[0]):
+            print(label_all[i] + ": " + str(score))
 
 class NetworkUtilities():
     """
@@ -305,7 +432,7 @@ class DatabaseUtilities():
             
         return flag
     
-    def update_many(self, condition, key_value):
+    def update_many(self, collection, condition, key_value):
         """
         conditonで指定したドキュメントをアップデートする。
         :param conditon: アップデート対象の条件
@@ -314,17 +441,25 @@ class DatabaseUtilities():
         tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
         tweets.update_many(condition, {'$set': key_value})
     
-    def insert_img_gcvlabels_to_db(self, username, id_str, img_url, gcv_labels):
+    def insert_one(self, collection, insert_set):
         """
-        画像とラベルの情報を教師データとしてDBに追加する。
-        :param str username: twitterアカウント
-        :param str id_str: tweetのid
-        :param str img_url: 画像のURL
-        :param labels_dict: ラベルと値の組み合わせ。GCVの結果を入れることを想定。
+        DBに1レコード追加する。
+        :param collection:　追加対象のcollection
+        :param insert_set: 追加レコード
+
         """
-        labels = self.client[config.DB_NAME][config.DB_LABELS_COLLECTION_NAME]
-        labels.insert_one({"username": username, "id_str": id_str, "url": img_url,
-                           "gcv_labels": gcv_labels})
+        labels = self.client[config.DB_NAME][collection]
+        labels.insert_one(insert_set)
+                          
+    def find(self, collection, condition):
+        """
+        DBを検索する
+        :param collection:　検索対象のcollection
+        :param condition: 検索条件
+        """
+        labels = self.client[config.DB_NAME][collection]
+        return labels.find(condition)
+        
 if __name__ == "__main__" :
     arg_num = len(sys.argv)
     print(arg_num)
@@ -361,7 +496,7 @@ if __name__ == "__main__" :
                 avhash.update_match_hash(url, folder_path+filename, config.DIFF_RATIO, start_datetime,end_datetime)
                 
     #Goovle Cloud Vision APIを使って教師データを作成
-    if sys.argv[1] == "gcv_labels":
+    elif sys.argv[1] == "gcv_labels":
         
         nwutil = NetworkUtilities()
         dao = DatabaseUtilities()
@@ -383,4 +518,27 @@ if __name__ == "__main__" :
                 continue
                 
             if result_dic["success"] == True:
-                dao.insert_img_gcvlabels_to_db(img_url["username"], img_url["id_str"], img_url["url"], result_dic["labels"])
+                #dao.insert_img_gcvlabels_to_db(img_url["username"], img_url["id_str"], img_url["url"], result_dic["labels"])
+                dao.insert_one(config.DB_LABELS_COLLECTION_NAME, 
+                               {"username": img_url["username"], "id_str": img_url["id_str"], 
+                               "url": img_url["url"], "gcv_labels": result_dic["labels"]})
+        
+    elif sys.argv[1] == "prepare":
+        cnn = CNNImageAnalyzer()
+        cnn.make_learning_data()
+        
+    elif sys.argv[1] == "train":
+        X_train, X_test, y_train, y_test = np.load(config.CNN_FOLDER + config.LEARNING_PACK_FILE)
+        # データを正規化する
+        X_train = X_train.astype("float") / 256
+        X_test  = X_test.astype("float")  / 256
+
+        cnn = CNNImageAnalyzer()
+        # モデルを訓練し評価する    
+        model = cnn.model_train(X_train, y_train)
+        cnn.model_eval(model, X_test, y_test)
+
+    elif sys.argv[1] == "predict":
+        img_filepath = sys.argv[2]
+        cnn = CNNImageAnalyzer()
+        cnn.predict_img_labels(img_filepath)

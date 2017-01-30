@@ -9,6 +9,7 @@ image_analyzer.py用の設定ファイル
 
 ## mongodbの設定
 DB_HOST = "localhost"
+#DB_HOST = "192.168.11.3"
 DB_PORT = 27017
 DB_NAME = "twitter-archive"
 DB_TWEETS_COLLECTION_NAME = "tweets"
@@ -33,12 +34,19 @@ DIFF_RATIO = 0.1
 GCP_KEY = ""
 
 ## CNN
+CNN_FOLDER = DATA_FOLDER + "cnn/"
+#採用する教師データの閾値
+SCORE_UPPER = 0.8
 #学習用に画像とラベルの一式をまとめたファイル
 LEARNING_PACK_FILE = "img_data_pack.npy"
 #学習したモデルを格納するファイル
 CNN_MODEL_FILE = "img_data-model.hdf5"
+#
+CNN_BATCH = 32
+#
+CNN_EPOCH = 10
 # 分類対象のラベル
-adult_class = ['UNKNOWN','VERY_UNLIKELY','UNLIKELY','POSSIBLE', 'LIKELY', 'VERY_LIKELY']
-categories = ['art','illustration','cartoon','anime','comics','drawing','font','comic book','sketch','brand']
-label_num = len(adult_class+categories)
-image_size = 128
+ADULT_LABEL = ['UNKNOWN','VERY_UNLIKELY','UNLIKELY','POSSIBLE', 'LIKELY', 'VERY_LIKELY']
+CATEGORIES_LABEL = ['art','illustration','cartoon','anime','comics','drawing','font','comic book','sketch','brand']
+LABEL_NUM = len(ADULT_LABEL+CATEGORIES_LABEL)
+IMG_SIZE = 128
