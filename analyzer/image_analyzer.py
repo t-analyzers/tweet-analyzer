@@ -531,6 +531,19 @@ if __name__ == "__main__" :
                                {"username": img_url["username"], "id_str": img_url["id_str"], 
                                "url": img_url["url"], "gcv_labels": result_dic["labels"]})
         
+    #画像ファイルをダウンロードする
+    elif sys.argv[1] == "download":
+        nwutil = NetworkUtilities()
+        dao = DatabaseUtilities()
+        img_url_list = dao.get_img_url_list(start_datetime,end_datetime)
+        for img_url in img_url_list:
+            url = img_url["url"]
+            folder_path = config.DOWNLOAD_IMG_FOLDER  + img_url["username"] + "/"
+            filename = img_url["id_str"] + "_" + img_url["url"].split("/")[-1]
+            # すでにファイルが存在している場合はスキップしてリストの次を処理する
+            if os.path.exists(folder_path + filename): continue
+            result = nwutil.download_file(url, folder_path, filename)
+
     elif sys.argv[1] == "prepare":
         cnn = CNNImageAnalyzer()
         cnn.make_learning_data()
