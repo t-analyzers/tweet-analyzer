@@ -536,13 +536,21 @@ if __name__ == "__main__" :
         nwutil = NetworkUtilities()
         dao = DatabaseUtilities()
         img_url_list = dao.get_img_url_list(start_datetime,end_datetime)
+        print("画像URL： " + str(len(img_url_list)))
+        count = 0
         for img_url in img_url_list:
             url = img_url["url"]
             folder_path = config.DOWNLOAD_IMG_FOLDER  + img_url["username"] + "/"
             filename = img_url["id_str"] + "_" + img_url["url"].split("/")[-1]
             # すでにファイルが存在している場合はスキップしてリストの次を処理する
             if os.path.exists(folder_path + filename): continue
+
             result = nwutil.download_file(url, folder_path, filename)
+            print(str(result))
+            
+            if result == True:  count = count+1
+                
+        print("ダウンロード件数：" + str(count))
 
     elif sys.argv[1] == "prepare":
         cnn = CNNImageAnalyzer()
