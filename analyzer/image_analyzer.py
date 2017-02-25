@@ -23,6 +23,7 @@ import base64
 from sklearn import cross_validation
 from PIL import Image
 import numpy as np
+import random, math
 
 # Deep Learning (Keras)
 from keras.models import Sequential
@@ -36,9 +37,6 @@ class AverageHash():
     """
     AverageHashで類似画像を検出するためのクラス。
     """
-
-    #connection mongoDB
-    #client = pymongo.MongoClient(config.DB_HOST, config.DB_PORT)
 
     def __int__(self):
         """
@@ -144,6 +142,9 @@ class CNNImageAnalyzer():
     def make_learning_data(self):
         """
         学習用データを使用して学習する
+    def make_learning_gcvdata(self, filelist, is_train):
+        """
+        GCVで作成した学習用データを使用して学習する
         """
         # フォルダごとの画像データを読み込む --- (※2)
         X = [] # 画像データ
@@ -151,7 +152,7 @@ class CNNImageAnalyzer():
         
         dao = DatabaseUtilities()
             
-        for f in self.enum_all_files(config.DOWNLOAD_IMG_FOLDER):
+        for f in filelist:
             img = Image.open(f)
             img = img.convert("RGB") # カラーモードの変更
             img = img.resize((config.IMG_SIZE, config.IMG_SIZE)) # 画像サイズの変更
@@ -163,7 +164,7 @@ class CNNImageAnalyzer():
             uname = f.split("/")[-2]
             
             results = []
-            for result in dao.find(config.DB_LABELS_COLLECTION_NAME, {"id_str": str_id, "username": uname}):
+            for result in dao.find(config.DB_LABELS_GCV_COLLECTION_NAME, {"id_str": str_id, "username": uname}):
                 results.append(result)
                 
             #DBに存在しない場合はforループの先頭に戻る
@@ -194,19 +195,26 @@ class CNNImageAnalyzer():
                 for i,cat in enumerate(config.CATEGORIES_LABEL):
                     if label == cat and score > config.SCORE_UPPER : Y2[i] = score
             
-            if sum(Y2) > 0:
+            if sum(Y2) > 0: #label annotationのscoreを持つ画像のみ学習データとして採用する。
                 X.append(data)
                 Y.append(Y1+Y2)
-                               
+                
+                if is_train == True: continue
+                #5度ずつの回転＋反転で学習データを増やす
+                for ang in range(-20, 20, 5):
+                    img2 = img.rotate(ang)
+                    data = np.asarray(img2)
+                X.append(data)
+                Y.append(Y1+Y2)
+                    # 反転する
+                    img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
+                    data = np.asarray(img2)
+                    X.append(data)
+                    Y.append(Y1+Y2)
         X = np.array(X)
         Y = np.array(Y)
         
-        # 学習データとテストデータを分ける --- (※3)
-        X_train, X_test, y_train, y_test = \
-            cross_validation.train_test_split(X, Y)
-        xy = (X_train, X_test, y_train, y_test)
-        np.save(config.CNN_FOLDER + config.LEARNING_PACK_FILE, xy)
-        print("ok,", len(Y))    
+        return X,Y
 
     # 全てのディレクトリを列挙
     def enum_all_files(self, path):
@@ -526,6 +534,23 @@ if __name__ == "__main__" :
     elif sys.argv[1] == "prepare":
         cnn = CNNImageAnalyzer()
         cnn.make_learning_data()
+#        cnn.make_learning_data()
+
+    elif sys.argv[1] == "prepare_gcv":
+        cnn = CNNImageAnalyzer()
+        
+        allfiles =[]
+        for f in cnn.enum_all_files(config.DOWNLOAD_IMG_FOLDER):
+            allfiles.append(f)
+        random.shuffle(allfiles)
+        th = math.floor(len(allfiles) * 0.6)
+        train = allfiles[0:th]
+        test  = allfiles[th:]
+        X_train, y_train = cnn.make_learning_gcvdata(train, True)
+        X_test, y_test = cnn.make_learning_gcvdata(test, False)
+        xy = (X_train, X_test, y_train, y_test)
+        np.save(config.CNN_FOLDER+config.LEARNING_PACK_FILE, xy)
+        print("ok,", len(y_train))
         
     elif sys.argv[1] == "train":
         X_train, X_test, y_train, y_test = np.load(config.CNN_FOLDER + config.LEARNING_PACK_FILE)

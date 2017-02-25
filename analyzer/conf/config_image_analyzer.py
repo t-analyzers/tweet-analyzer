@@ -13,6 +13,7 @@ DB_HOST = "localhost"
 DB_PORT = 27017
 DB_NAME = "twitter-archive"
 DB_TWEETS_COLLECTION_NAME = "tweets"
+DB_LABELS_GCV_COLLECTION_NAME = "img_labels_gcv"
 DB_LABELS_COLLECTION_NAME = "img_labels"
 
 ## ファイルパスの指定
