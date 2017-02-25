@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import MeCab
 
-import conf.config_arhiver as config
+import conf.config_archiver as config
 from base_analyzer import BaseAnalyzer
 
 # 参考サイト：https://taku910.github.io/mecab/

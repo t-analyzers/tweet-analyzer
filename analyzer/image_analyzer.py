@@ -142,6 +142,7 @@ class CNNImageAnalyzer():
     def make_learning_data(self):
         """
         学習用データを使用して学習する
+        """
     def make_learning_gcvdata(self, filelist, is_train):
         """
         GCVで作成した学習用データを使用して学習する
@@ -206,11 +207,11 @@ class CNNImageAnalyzer():
                     data = np.asarray(img2)
                 X.append(data)
                 Y.append(Y1+Y2)
-                    # 反転する
-                    img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
-                    data = np.asarray(img2)
-                    X.append(data)
-                    Y.append(Y1+Y2)
+                # 反転する
+                img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
+                data = np.asarray(img2)
+                X.append(data)
+                Y.append(Y1+Y2)
         X = np.array(X)
         Y = np.array(Y)
         
