@@ -211,18 +211,18 @@ def _get_tweets_data(condition):
     results_list = []
     for i in range(0,len(tweets)):
         tweet = tweets[i]
+        #retweetの場合はフラグを立てる
         retweet_flag = False
-        #retweetは元のツイートを取り出す
         if 'retweeted_status' in tweet:
-            tweet = tweet['retweeted_status']
             retweet_flag = True
-                    
+
+        #ツイート本文を比較する
         exist_flag = False
         for t in results_list :
-            if(t['id']==tweet['id_str'] and t['user.screen_name']==tweet['user']['screen_name']):
+            if(t['text']==tweet['text']):
                 exist_flag = True
                 break
-        #すでにresult_listに含まれているツイートは処理しない(リツイートが先に処理されたら元ツイートが入らないため、事前にソートしておく)
+        #すでにresult_listに含まれているツイートは処理しない
         if exist_flag == False:
             result = {'created_datetime': dutil.str_to_date_jp(tweet["created_at"]).strftime(date_format),
               'retweet_count': tweet['retweet_count'], 'id': tweet['id_str'],
