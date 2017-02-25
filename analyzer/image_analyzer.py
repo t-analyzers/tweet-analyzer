@@ -423,13 +423,13 @@ class DatabaseUtilities():
         
         return results
             
-    def exist_check_img_url_in_db(self, url):
+    def exist_check_img_url_in_db(self, collection_name, url):
         """
         指定したURLがDBの教師データ内に存在しているかどうかチェックする
         :param str url: チェックするURL
         :retrun: True or False
         """
-        labels = self.client[config.DB_NAME][config.DB_LABELS_COLLECTION_NAME]
+        labels = self.client[config.DB_NAME][collection_name]
         results = []
         for result in labels.find({"url": url}):
                results.append(result)
@@ -517,7 +517,7 @@ if __name__ == "__main__" :
             filename = img_url["id_str"] + "_" + img_url["url"].split("/")[-1]
             
             # すでにDBにURLが存在している場合はスキップしてリストの次を処理する
-            if dao.exist_check_img_url_in_db(url) : continue           
+            if dao.exist_check_img_url_in_db(config.DB_LABELS_GCV_COLLECTION_NAME,url) : continue           
             
             result = nwutil.download_file(url, folder_path, filename)
             if result == True:
