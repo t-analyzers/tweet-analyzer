@@ -41,6 +41,9 @@ class TweetArchiver(BaseAnalyzer):
         # 初回の検索時は、max_idの設定をしないように-1を設定しておく。
         max_id = -1
         tweet_count = 0
+        # リトライ用のカウンタ
+        retry_count = 0
+        max_retry_count = 5
 
         query_string = self._get_query_string()
 
@@ -80,7 +83,16 @@ class TweetArchiver(BaseAnalyzer):
                 # 最後に取得したTweetのIDで更新する。
                 max_id = statuses[-1]["id"]
 
-            except (TypeError, TweepError) as e:
+            except TweepError as e:
+                print(str(e))
+                self.log.debug("Failed to call, in retry({0}/{1})".format(retry_count, max_retry_count))
+                self.log.exception(str(e))
+                if retry_count >= max_retry_count:
+                    break
+                else:
+                    retry_count += 1
+                    time.sleep(10)
+            except Exception as e:
                 print(str(e))
                 self.log.exception(str(e))
                 break
