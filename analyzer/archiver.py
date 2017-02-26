@@ -91,7 +91,7 @@ class TweetArchiver(BaseAnalyzer):
                     break
                 else:
                     retry_count += 1
-                    time.sleep(10)
+                    time.sleep(30)
             except Exception as e:
                 print(str(e))
                 self.log.exception(str(e))
