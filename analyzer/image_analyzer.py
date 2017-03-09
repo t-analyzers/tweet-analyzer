@@ -139,13 +139,82 @@ class CNNImageAnalyzer():
     def __int__(self):
         super().__init__()
         
-    def make_learning_data(self):
+    def make_learning_data(self, labels, is_train):
         """
-        学習用データを使用して学習する
+        学習用データ(DB_LABELS_COLLECTION_NAME)を使用して学習する
         """
+        # フォルダごとの画像データを読み込む --- (※2)
+        X = [] # 画像データ
+        Y = [] # ラベルデータ
+        
+        print("・トレーニング？：" + str(is_train))
+        print("・教師データ（ラベル数）：" + str(len(labels)))
+        for l in labels:
+            folder_path = config.DOWNLOAD_IMG_FOLDER + l["screen_name"] + "/"
+            file_name = l["id"] + "_" + l["url"].split("/")[-1]
+            file_path = folder_path + file_name
+            
+            nutils = NetworkUtilities()
+            
+            ## 画像ファイルがなかったら取得。取得できなかったらスキップする
+            if nutils.download_file_if_dont_exist(l["url"], file_path, file_name): continue
+            
+            img = Image.open(file_path)
+            img = img.convert("RGB") # カラーモードの変更
+            img = img.resize((config.IMG_SIZE, config.IMG_SIZE)) # 画像サイズの変更
+            data = np.asarray(img)
+                
+            Y1 = [0 for i in range(len(config.ADULT_LABEL))]
+            Y2 = [0 for i in range(len(config.CATEGORIES_LABEL))]
+            
+            ##
+            annotation = l.get("annotation")
+            if annotation == None : continue
+            adult_label = annotation.get("adult")
+
+            if adult_label == None : continue
+            
+            for i,ad in enumerate(config.ADULT_LABEL):  
+                if adult_label == ad:
+                    Y1[i] = 1
+                    break
+
+            label_annotations = annotation.get('labels')
+            if label_annotations == None: continue
+            
+            for label in label_annotations:                   
+                for i,cat in enumerate(config.CATEGORIES_LABEL):
+                    if label == cat : 
+                        Y2[i] = 1
+                        break
+                    
+            X.append(data)
+            Y.append(Y1+Y2)
+                    
+            if is_train == False: continue
+            #5度ずつの回転＋反転で学習データを増やす
+            for ang in range(-20, 20, 5):
+                img2 = img.rotate(ang)
+                data = np.asarray(img2)
+                X.append(data)
+                Y.append(Y1+Y2)
+
+                # 反転する
+                img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
+                data = np.asarray(img2)
+                X.append(data)
+                Y.append(Y1+Y2)               
+        
+        print("画像データ数:" + str(len(X)))
+        X = np.array(X)
+        Y = np.array(Y)
+        
+        return X,Y
+
+
     def make_learning_gcvdata(self, filelist, is_train):
         """
-        GCVで作成した学習用データを使用して学習する
+        GCVで作成した学習用データ(DB_LABELS_GCV_COLLECTION_NAME)を使用して学習する
         """
         # フォルダごとの画像データを読み込む --- (※2)
         X = [] # 画像データ
@@ -171,15 +240,15 @@ class CNNImageAnalyzer():
             #DBに存在しない場合はforループの先頭に戻る
             if len(results) == 0: continue
     
-            Y1 = [0 for i in range(len(config.ADULT_LABEL))]
-            Y2 = [0.0 for i in range(len(config.CATEGORIES_LABEL))]
+            Y1 = [0 for i in range(len(config.GCV_ADULT_LABEL))]
+            Y2 = [0.0 for i in range(len(config.GCV_CATEGORIES_LABEL))]
             ##
             safe_annotations = results[0]['gcv_labels'][0]
             safe_annotations = safe_annotations.get('safeSearchAnnotation')
             if safe_annotations == None: continue
             
             adult_label = safe_annotations["adult"]
-            for i,ad in enumerate(config.ADULT_LABEL):  
+            for i,ad in enumerate(config.GCV_ADULT_LABEL):  
                 if adult_label == ad:
                     Y1[i] = 1
                     break
@@ -193,7 +262,7 @@ class CNNImageAnalyzer():
                 label = label_annotation['description']
                 score = label_annotation['score']
                     
-                for i,cat in enumerate(config.CATEGORIES_LABEL):
+                for i,cat in enumerate(config.GCV_CATEGORIES_LABEL):
                     if label == cat and score > config.SCORE_UPPER : Y2[i] = score
             
             if sum(Y2) > 0: #label annotationのscoreを持つ画像のみ学習データとして採用する。
@@ -205,13 +274,13 @@ class CNNImageAnalyzer():
                 for ang in range(-20, 20, 5):
                     img2 = img.rotate(ang)
                     data = np.asarray(img2)
-                X.append(data)
-                Y.append(Y1+Y2)
-                # 反転する
-                img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
-                data = np.asarray(img2)
-                X.append(data)
-                Y.append(Y1+Y2)
+                    X.append(data)
+                    Y.append(Y1+Y2)
+                    # 反転する
+                    img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
+                    data = np.asarray(img2)
+                    X.append(data)
+                    Y.append(Y1+Y2)
         X = np.array(X)
         Y = np.array(Y)
         
@@ -232,22 +301,19 @@ class CNNImageAnalyzer():
         model.add(Convolution2D(32, 3, 3, 
         	border_mode='same',
         	input_shape=in_shape))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        
+        model.add(Activation('relu'))        
+        model.add(MaxPooling2D(pool_size=(2, 2)))        
         model.add(Dropout(0.25))
-        
+         
         model.add(Convolution2D(64, 3, 3, border_mode='same'))
         model.add(Activation('relu'))
         model.add(Convolution2D(64, 3, 3))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        
+        model.add(MaxPooling2D(pool_size=(2, 2)))        
         model.add(Dropout(0.25))
-        
+       
         model.add(Flatten()) 
-        model.add(Dense(512))
-        model.add(Activation('relu'))
-        
+        model.add(Dense(1024))
+        model.add(Activation('relu'))        
         model.add(Dropout(0.5))
         
         model.add(Dense(config.LABEL_NUM))
@@ -466,8 +532,13 @@ class DatabaseUtilities():
         :param collection:　検索対象のcollection
         :param condition: 検索条件
         """
-        labels = self.client[config.DB_NAME][collection]
-        return labels.find(condition)
+        #labels = self.client[config.DB_NAME][collection]
+        #return labels.find(condition)
+        labels = []
+        for l in self.client[config.DB_NAME][collection].find(condition):
+            labels.append(l)
+            
+        return labels
         
 if __name__ == "__main__" :
     arg_num = len(sys.argv)
@@ -527,11 +598,10 @@ if __name__ == "__main__" :
                 continue
                 
             if result_dic["success"] == True:
-                #dao.insert_img_gcvlabels_to_db(img_url["username"], img_url["id_str"], img_url["url"], result_dic["labels"])
                 dao.insert_one(config.DB_LABELS_COLLECTION_NAME, 
                                {"username": img_url["username"], "id_str": img_url["id_str"], 
                                "url": img_url["url"], "gcv_labels": result_dic["labels"]})
-        
+                               
     #画像ファイルをダウンロードする
     elif sys.argv[1] == "download":
         nwutil = NetworkUtilities()
@@ -555,9 +625,20 @@ if __name__ == "__main__" :
 
     elif sys.argv[1] == "prepare":
         cnn = CNNImageAnalyzer()
-        cnn.make_learning_data()
-#        cnn.make_learning_data()
-
+        dao = DatabaseUtilities()
+                
+        all_labels = dao.find(config.DB_LABELS_COLLECTION_NAME,{})
+        random.shuffle(all_labels)
+        th = math.floor(len(all_labels) * 0.6)
+        train = all_labels[0:th]
+        test = all_labels[th:]
+        X_train, y_train = cnn.make_learning_data(train, True)
+        X_test, y_test = cnn.make_learning_data(test, False)
+        xy = (X_train, X_test, y_train, y_test)
+        os.remove(config.CNN_FOLDER+config.LEARNING_PACK_FILE)
+        np.save(config.CNN_FOLDER+config.LEARNING_PACK_FILE, xy)
+        print("ok,", len(y_train))
+ 
     elif sys.argv[1] == "prepare_gcv":
         cnn = CNNImageAnalyzer()
         

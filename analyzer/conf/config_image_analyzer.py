@@ -47,7 +47,12 @@ CNN_BATCH = 32
 #
 CNN_EPOCH = 10
 # 分類対象のラベル
-ADULT_LABEL = ['UNKNOWN','VERY_UNLIKELY','UNLIKELY','POSSIBLE', 'LIKELY', 'VERY_LIKELY']
-CATEGORIES_LABEL = ['art','illustration','cartoon','anime','comics','drawing','font','comic book','sketch','brand']
+ADULT_LABEL = ['true','false','possible']
+CATEGORIES_LABEL = ["illust", "photo", "text", "calendar", "cover","placard", "manga","capture","icon","craft"]
 LABEL_NUM = len(ADULT_LABEL+CATEGORIES_LABEL)
+
+GCV_ADULT_LABEL = ['UNKNOWN','VERY_UNLIKELY','UNLIKELY','POSSIBLE', 'LIKELY', 'VERY_LIKELY']
+GCV_CATEGORIES_LABEL = ['art','illustration','cartoon','anime','comics','drawing','font','comic book','sketch','brand']
+GCV_LABEL_NUM = len(GCV_ADULT_LABEL+GCV_CATEGORIES_LABEL)
+
 IMG_SIZE = 128
