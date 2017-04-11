@@ -43,13 +43,14 @@ LEARNING_PACK_FILE = "img_data_pack.npy"
 #学習したモデルを格納するファイル
 CNN_MODEL_FILE = "img_data-model.hdf5"
 #
-CNN_BATCH = 32
+CNN_BATCH = 64
 #
 CNN_EPOCH = 10
 # 分類対象のラベル
 ADULT_LABEL = ['true','false','possible']
 CATEGORIES_LABEL = ["illust", "photo", "text", "calendar", "cover","placard", "manga","capture","icon","craft"]
-LABEL_NUM = len(ADULT_LABEL+CATEGORIES_LABEL)
+#LABEL_NUM = len(ADULT_LABEL+CATEGORIES_LABEL)
+LABEL_NUM = len(CATEGORIES_LABEL)
 
 GCV_ADULT_LABEL = ['UNKNOWN','VERY_UNLIKELY','UNLIKELY','POSSIBLE', 'LIKELY', 'VERY_LIKELY']
 GCV_CATEGORIES_LABEL = ['art','illustration','cartoon','anime','comics','drawing','font','comic book','sketch','brand']
