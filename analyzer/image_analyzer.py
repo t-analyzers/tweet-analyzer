@@ -24,6 +24,7 @@ import math
 from keras.models import Sequential
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
+from keras import backend
 
 # 設定ファイル
 import conf.config_image_analyzer as config
@@ -152,7 +153,7 @@ class CNNImageAnalyzer():
                 print("skip")
                 continue
 
-#            print(file_path)
+            # print(file_path)
             img = Image.open(file_path)
             img = img.convert("RGB") # カラーモードの変更
             img = img.resize((config.IMG_SIZE, config.IMG_SIZE)) # 画像サイズの変更
@@ -218,17 +219,19 @@ class CNNImageAnalyzer():
 
         return X, Y
 
-    # 全てのディレクトリを列挙
+    
     def enum_all_files(self, path):
+        '''
+        全てのディレクトリを列挙
+        '''
         for root, dirs, files in os.walk(path):
             for f in files:
                 fname = os.path.join(root, f)
                 if re.search(r'\.(jpg|jpeg|png)$', fname):
                     yield fname
 
-    # モデルを構築 --- (※2)
-    def build_model(self, in_shape, label_num=config.LABEL_NUM, loss_function='binary_crossentropy'):
-        print("loss:" + loss_function)
+    # モデルを構築
+    def build_model(self, in_shape):
         model = Sequential()
 
         model.add(Convolution2D(32, 3, 3, border_mode='same', input_shape=in_shape))
@@ -247,121 +250,70 @@ class CNNImageAnalyzer():
         model.add(Activation('relu'))
         model.add(Dropout(0.5))
 
-        model.add(Dense(label_num))
+        model.add(Dense(config.LABEL_NUM))
         model.add(Activation('softmax'))
-        model.compile(loss=loss_function, optimizer='rmsprop', metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+        # model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         return model
 
     # モデルを訓練する
-    def model_train(self, X, y, y_label=None):
+    def model_train(self, X, y):
         model = None
-        l_len = config.LABEL_NUM
         hdf5_file = config.CNN_FOLDER + config.CNN_MODEL_FILE
-        y2 = y
-#        loss_function = 'categorical_crossentropy'
-        loss_function = 'binary_crossentropy'
-        if y_label != None:
-
-            label_index = None
-            for i, cat in enumerate(config.CATEGORIES_LABEL):
-                if y_label == cat:
-                    label_index = i
-            y_tmp = y[:, label_index]
-            #y2 = y_tmp.reshape(len(y_tmp), 1)
-
-            y_not_tmp = []
-            for i, score in enumerate(y_tmp):
-                y_not_tmp.append(1 - score)
-
-            y_not_tmp = np.array(y_not_tmp)
-            y2 = np.array([y_tmp, y_not_tmp]).transpose()
-
-            loss_function = 'binary_crossentropy'
-
-            l_len = 1+1
-
-            f = config.CNN_MODEL_FILE.split(".")
-            file_name = f[0] + "_" + y_label + "." + f[1]
-            hdf5_file = config.CNN_FOLDER + file_name
-
-#        model = self.build_model(X.shape[1:], label_num=l_len, loss_function=loss_function)
-        model = self.build_model(X.shape[1:], label_num=l_len)
-        model.fit(X, y2, batch_size=config.CNN_BATCH, nb_epoch=config.CNN_EPOCH)
+        model = self.build_model(X.shape[1:])
+        model.fit(X, y, batch_size=config.CNN_BATCH, nb_epoch=config.CNN_EPOCH)
 
         # モデルを保存する
         model.save_weights(hdf5_file)
 
         return model
 
-    # モデルを評価する --- (※5)
-    def model_eval(self, model, X, y, y_label=None):
-        y2 = y
-
-        if y_label != None:
-            label_index = None
-            for i, cat in enumerate(config.CATEGORIES_LABEL):
-                if y_label == cat:
-                    label_index = i
-            y_tmp = y[:, label_index]
-            #y2 = y_tmp.reshape(len(y_tmp), 1)
-
-            y_not_tmp = []
-            for i, score in enumerate(y_tmp):
-                y_not_tmp[i] = 1 - score
-
-            y_not_tmp = np.array(y_not_tmp)
-            y2 = np.array([y_tmp, y_not_tmp]).transpose()
-
-        score = model.evaluate(X, y2)
+    # モデルを評価する
+    def model_eval(self, model, X, y):
+        score = model.evaluate(X, y)
         print('loss=', score[0])
         print('accuracy=', score[1])
 
-    def predict_img_labels(self, filepath, label=None):
-        # 入力画像をNumpyに変換 --- (※2)
+    def predict_img_labels(self, filepath, model_file_name = config.CNN_MODEL_FILE):
+        file_name = model_file_name
+        hdf5_file = config.CNN_FOLDER + file_name
+        label_all = config.CATEGORIES_LABEL
+
+        # 入力画像をNumpyに変換
         X = []
-        files = []
         img = Image.open(filepath)
         img = img.convert("RGB")
         img = img.resize((config.IMG_SIZE, config.IMG_SIZE))
         in_data = np.asarray(img)
         X.append(in_data)
-        files.append(filepath)
         X = np.array(X)
 
-        #loss_function = 'categorical_crossentropy'
-        loss_function = 'binary_crossentropy'
-        l_len = 0
-        file_name = ""
-        if label == None:
-            l_len = config.LABEL_NUM
-            file_name = config.CNN_MODEL_FILE
-        else:
-            l_len = 1 + 1
-            loss_function = 'binary_crossentropy'
-            f = config.CNN_MODEL_FILE.split(".")
-            file_name = f[0] + "_" + label + "." + f[1]
-
-        hdf5_file = config.CNN_FOLDER + file_name
-
         # CNNのモデルを構築
-#        model = self.build_model(X.shape[1:], label_num=l_len, loss_function=loss_function)
-        model = self.build_model(X.shape[1:], label_num=l_len)
+        model = self.build_model(X.shape[1:])
         model.load_weights(hdf5_file)
 
         # データを予測
         pre = model.predict(X)
 
-        # 結果出力
-        if label == None:
-            label_all = config.CATEGORIES_LABEL
-            #label_all = config.ADULT_LABEL+config.CATEGORIES_LABEL
-            for i, score in enumerate(pre[0]):
-                if score > 0.0:
-                    print(label_all[i] + ": " + str(score))
-        else:
-            pre = model.predict(X)
-            print(label + ": " + str(pre[0]))
+        values ={}
+        print(filepath)
+        for i, score in enumerate(pre[0]):
+            if score > 0.0:
+                print(label_all[i] + ": " + str(score))
+                values[label_all[i]] = score
+        backend.clear_session()
+        
+        return values
 
+    def update_labels(self, img_url, labels, start_datetime, end_datetime):
+        """
+        :param str img_url: ファイルのURL
+        :param str labels:　画像に割り当てるラベル
+        """
+        dao = DatabaseUtilities()
+        search_condition = {'created_datetime': {'$gte': start_datetime, '$lte': end_datetime}, 
+                            'entities.media.media_url': img_url}
+        dao.update_many(config.DB_TWEETS_COLLECTION_NAME, search_condition, {'labels': labels})
 
 class NetworkUtilities():
     """
@@ -398,7 +350,9 @@ class NetworkUtilities():
             elif hasattr(e, 'code'):
                 print('The server couldn\'t fulfill the request.')
                 print('Error code: ', e.code)
-
+            return False #exceptionが発生した場合
+        except Exception as e:
+            print("Exception happend at " + url) 
             return False #exceptionが発生した場合
 
         print("download " + url + " to " + folder_path+filename)
@@ -444,17 +398,16 @@ class DatabaseUtilities():
 
         tweets = self.client[config.DB_NAME][config.DB_TWEETS_COLLECTION_NAME]
         results = []
+        media_urls = []
         for tweet in tweets.find(search_condition, {'id_str': 1, 'user': 1, 'entities':1}):
             #media_urlを持つtweetにはそのURLを保存する
             media_elements = tweet.get('entities').get('media')
             if media_elements != None:
                 for media in media_elements:
                     media_url = media.get('media_url')
-                    if media_url != None:
-                        result = {}
-                        result["url"] = media_url
-                        result["username"] = tweet['user']['screen_name']
-                        result["id_str"] = tweet['id_str']
+                    if (media_url != None) and not (media_url in media_urls):
+                        media_urls.append(media_url)
+                        result = {"url": media_url, "username": tweet['user']['screen_name'], "id_str": tweet['id_str']}
                         results.append(result)
         return results
 
@@ -482,7 +435,8 @@ class DatabaseUtilities():
         :param key_value: セットする値 {"key": value}
         """
         tweets = self.client[config.DB_NAME][collection]
-        tweets.update_many(condition, {'$set': key_value})
+        result = tweets.update_many(condition, {'$set': key_value})
+        return result
 
     def insert_one(self, collection, insert_set):
         """
@@ -500,8 +454,6 @@ class DatabaseUtilities():
         :param collection:　検索対象のcollection
         :param condition: 検索条件
         """
-        #labels = self.client[config.DB_NAME][collection]
-        #return labels.find(condition)
         labels = []
         for l in self.client[config.DB_NAME][collection].find(condition):
             labels.append(l)
@@ -510,7 +462,6 @@ class DatabaseUtilities():
 
 if __name__ == "__main__":
     arg_num = len(sys.argv)
-#    print(arg_num)
     print(sys.argv)
 
     #実行日時の前日(0:00-24:00)を指定する
@@ -526,6 +477,7 @@ if __name__ == "__main__":
 
     #ハッシュによる類似画像チェック
     if sys.argv[1] == "hash":
+        begin_datetime = datetime.datetime.now()
         avhash = AverageHash()
         nwutil = NetworkUtilities()
         dao = DatabaseUtilities()
@@ -541,6 +493,11 @@ if __name__ == "__main__":
             result = nwutil.download_file_if_dont_exist(url, folder_path, filename)
             if result == True:
                 avhash.update_match_hash(url, folder_path+filename, config.DIFF_RATIO, start_datetime, end_datetime)
+
+        finish_datetime = datetime.datetime.now()
+        print("begin: " + str(begin_datetime))
+        print("finish: " + str(finish_datetime))
+        print("time: " + str(finish_datetime - begin_datetime))
 
     #画像ファイルをダウンロードする
     elif sys.argv[1] == "download":
@@ -559,7 +516,6 @@ if __name__ == "__main__":
                 continue
 
             result = nwutil.download_file(url, folder_path, filename)
-            print(str(result))
 
             if result == True:
                 count = count + 1
@@ -602,8 +558,8 @@ if __name__ == "__main__":
 
         cnn = CNNImageAnalyzer()
         # モデルを訓練し評価する
-        model = cnn.model_train(X_train, y_train, y_label)
-        cnn.model_eval(model, X_test, y_test, y_label)
+        model = cnn.model_train(X_train, y_train)
+        cnn.model_eval(model, X_test, y_test)
 
         finish_datetime = datetime.datetime.now()
         print("begin: " + str(begin_datetime))
@@ -611,7 +567,6 @@ if __name__ == "__main__":
         print("time: " + str(finish_datetime - begin_datetime))
 
     elif sys.argv[1] == "predict":
-
         img_filepath = ""
         label = None
         if arg_num == 3:
@@ -621,4 +576,48 @@ if __name__ == "__main__":
             img_filepath = sys.argv[3]
 
         cnn = CNNImageAnalyzer()
-        cnn.predict_img_labels(img_filepath, label=label)
+        cnn.predict_img_labels(img_filepath)
+
+    elif sys.argv[1] == "predict2db":
+        begin_datetime = datetime.datetime.now()
+
+        nwutil = NetworkUtilities()
+        dao = DatabaseUtilities()
+        img_url_list = dao.get_img_url_list(start_datetime, end_datetime)
+        model_files = config.CNN_MODEL_FILES
+        
+        img_urls = []
+        img_filepaths = []
+        for img_url in img_url_list:
+            url = img_url["url"]
+            folder_path = config.DOWNLOAD_IMG_FOLDER  + img_url["username"] + "/"
+            filename = img_url["id_str"] + "_" + img_url["url"].split("/")[-1]
+            result = nwutil.download_file_if_dont_exist(url, folder_path, filename)
+            print(folder_path + filename)
+            if result == True:
+                img_urls.append(url)
+                img_filepaths.append(folder_path + filename)
+        
+        print("img_urls: " + str(len(img_urls)))
+        print("img_filepaths: " + str(len(img_filepaths)))
+        cnn = CNNImageAnalyzer()
+
+        for i, img_url in enumerate(img_urls):
+            labels = []
+            for mfile in model_files:
+                label_values = cnn.predict_img_labels(img_filepaths[i], model_file_name=mfile)
+                for label in label_values:
+                    if (label_values[label] > 0.9) and (label not in labels):
+                        labels.append(label)
+
+            search_condition = {}
+            search_condition['created_datetime'] = {'$gte': start_datetime, '$lte': end_datetime}
+            search_condition['entities.media.media_url'] = img_url
+            result = dao.update_many(config.DB_TWEETS_COLLECTION_NAME, search_condition, {'labels': labels})
+            print(img_url + ": update count " + str(result.matched_count))
+
+        finish_datetime = datetime.datetime.now()
+        print("begin: " + str(begin_datetime))
+        print("finish: " + str(finish_datetime))
+        print("time: " + str(finish_datetime - begin_datetime))
+        print("target images: " + str(len(img_url_list)))
