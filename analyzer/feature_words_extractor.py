@@ -30,7 +30,7 @@ import conf.config_feature_words as config
 import datetime
 from pytz import timezone
 import json
-import os.path
+import os.path, sys
 from os.path import join, relpath
 from glob import glob
 from wordcloud import WordCloud
@@ -172,24 +172,25 @@ def _extract_feature_words(terms, tfidfs, i, n):
     words = [terms[idx] for idx in top_n_idx]
     return words
 
-def create_tweets_files(output_folder_path, start_date, end_date):
+def create_tweets_files(output_folder_path, start_date, end_date, days = ANALYZE_DAYS):
     """
-    日別ツイートファイル(tweets_YYYYMMDD.json)を保存する。すでに存在していた場合は上書きせずスキップする。
+    日別ツイートファイル(tweets_YYYYMMDD.json)を保存する。すでに存在していた場合、上書きする。
     :param output_folder_path: 日別ツイートファイルの保存先。
     :param start_datetime: 検索対象の開始時刻
     :param end_datetime: 検索対象の終了時刻
     """
-    for i in range(0, ANALYZE_DAYS) :
+    for i in range(0, days) :
+
         date = start_date + datetime.timedelta(days=i)
+        condition = {'created_datetime': {'$gte': date, '$lt': date + datetime.timedelta(days=1)}}
+
         str_date = format(date.strftime('%Y%m%d'))
         file_path = output_folder_path + 'tweets_' + str_date + '.json'    
     
-        if os.path.exists(file_path) == False:
-            file = open(file_path,'w')
-            condition = {'created_datetime': {'$gte': date, '$lt': date + datetime.timedelta(days=1)}}
-            json.dump(_get_tweets_data(condition),file, indent=0)
-            file.close()
-            print(file_path)
+        file = open(file_path,'w')
+        json.dump(_get_tweets_data(condition),file, indent=0)
+        file.close()
+        print(file_path)
 
 def _get_tweets_data(condition):
     """
@@ -202,7 +203,7 @@ def _get_tweets_data(condition):
     tweets_tmp = []
     for tweet in tweet_collection.find(condition,{'created_datetime':1 ,'created_at': 1, 
                                                   'retweet_count': 1, 'id_str': 1, 'user': 1, 'text': 1, 'entities':1,
-                                                  'retweeted_status': 1, 'negaposi':1, 'hash_match':1}):
+                                                  'retweeted_status': 1, 'negaposi':1, 'hash_match':1, 'labels':1}):
         tweets_tmp.append(tweet)
     
     tweets = sorted(tweets_tmp,key=lambda x:x["created_datetime"])
@@ -238,6 +239,10 @@ def _get_tweets_data(condition):
                 result['media_urls'] = ",".join(media_urls)
                 #result['media_urls'] = media_urls  ##media_urlsが複数入っているツイートは見たことないが、複数入る前提でリストにしておくのが良さそう。
             
+            label_elements = tweet.get('labels')
+            if label_elements != None:
+                result['labels'] = label_elements
+
             #プリント予約番号が抽出できたら保存する。
             printids = util.get_nps_printid(result['text'])
             if len(printids) > 0: result['PrintID'] = ",".join(printids)
@@ -317,31 +322,42 @@ def create_filelist(folder_path, target_filename_regexp, output_filename, count=
 ## main
 if __name__ == '__main__':
     
-    d = datetime.datetime.now()
-    date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
-    start_date = date - datetime.timedelta(days=ANALYZE_DAYS)
-    date = datetime.datetime(d.year,d.month,d.day,23,59,59,999999,timezone('Asia/Tokyo'))
-    end_date = date - datetime.timedelta(days=1)
-    print(start_date)
-    print(end_date)
-
     #出力先パスを指定        
     output_folder_path = config.OUTPUT_FOLDER_PATH
     print("[info] 出力先パス： " + output_folder_path)
+
+    d = datetime.datetime.now()
     
-    #ツイート分析結果をファイルに保存する
-    print("[info]ツイート分析開始")
-    create_tweets_analyze_result_file(output_folder_path, start_date, end_date)
-    #分析したツイートを日別ツイートファイルとして保存する（存在しないファイルを作成。上書きしない）
-    print("[info] 日別ツイートファイル作成開始")
-    create_tweets_files(output_folder_path, start_date, end_date)
-    #分析したツイートの日別ワードクラウドを画像ファイルとして保存する（上書き）
-    print("[info] 日別ワードクラウド作成開始")
-    create_word_cloud(output_folder_path,start_date, end_date)
-    
-    #出力先フォルダ内の特徴語ファイルと日別ツイートファイルのリストを作成する（上書き）
-    print("[info] ファイルリストの作成開始")
-    create_filelist(output_folder_path, 'feature_words_*', 'filelist-feature_words.json')
-    create_filelist(output_folder_path, 'tweets_*', 'filelist-tweets.json')
-    
-    print("[info] 処理完了")
+    if len(sys.argv) == 2 and sys.argv[1] == 'tweets':
+        date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
+        start_date = date - datetime.timedelta(days=1)
+        date = datetime.datetime(d.year,d.month,d.day,23,59,59,999999,timezone('Asia/Tokyo'))
+        end_date = date - datetime.timedelta(days=1)
+
+        #分析したツイートを日別ツイートファイルとして保存する（上書き）
+        print("[info] 日別ツイートファイル作成開始")
+        create_tweets_files(output_folder_path, start_date, end_date, days = 1)
+        print("[info] 処理完了")
+
+    else:
+        date = datetime.datetime(d.year,d.month,d.day,0,0,0,0,timezone('Asia/Tokyo'))
+        start_date = date - datetime.timedelta(days=ANALYZE_DAYS)
+        date = datetime.datetime(d.year,d.month,d.day,23,59,59,999999,timezone('Asia/Tokyo'))
+        end_date = date - datetime.timedelta(days=1)
+
+        #ツイート分析結果をファイルに保存する
+        print("[info]ツイート分析開始")
+        create_tweets_analyze_result_file(output_folder_path, start_date, end_date)
+        #分析したツイートを日別ツイートファイルとして保存する（上書き）
+        print("[info] 日別ツイートファイル作成開始")
+        create_tweets_files(output_folder_path, start_date, end_date)
+        #分析したツイートの日別ワードクラウドを画像ファイルとして保存する（上書き）
+        print("[info] 日別ワードクラウド作成開始")
+        create_word_cloud(output_folder_path,start_date, end_date)
+        
+        #出力先フォルダ内の特徴語ファイルと日別ツイートファイルのリストを作成する（上書き）
+        print("[info] ファイルリストの作成開始")
+        create_filelist(output_folder_path, 'feature_words_*', 'filelist-feature_words.json')
+        create_filelist(output_folder_path, 'tweets_*', 'filelist-tweets.json')
+        
+        print("[info] 処理完了")
