@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-画像を分析するための機能を実装。
+画像を分析するための以下の機能を実装。
+・ハッシュによる類似画像判定
+・機械学習による画像分類
+機械学習のライブラリにはKerasを使用。
 
 @author: hitoshi
 """
@@ -209,8 +212,10 @@ class CNNImageAnalyzer():
                 if re.search(r'\.(jpg|jpeg|png)$', fname):
                     yield fname
 
-    # モデルを構築
     def build_model(self, in_shape):
+        '''
+        学習モデルを構築
+        '''
         model = Sequential()
 
         model.add(Convolution2D(32, 3, 3, border_mode='same', input_shape=in_shape))
@@ -236,8 +241,12 @@ class CNNImageAnalyzer():
         model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         return model
 
-    # モデルを訓練する
     def model_train(self, X, y):
+        '''
+        学習モデルを訓練し、ファイルとして保存する。
+        :param numpy.array X: 訓練用の画像データのリスト
+        :param numpy.array y: 訓練用の画像に対する分類ラベルのリスト
+        '''
         model = None
         hdf5_file = config.CNN_FOLDER + config.CNN_MODEL_FILE
         model = self.build_model(X.shape[1:])
@@ -250,14 +259,23 @@ class CNNImageAnalyzer():
 
         return model
 
-    # モデルを評価する
     def model_eval(self, model, X, y):
+        '''
+        学習モデルを評価する
+        :param numpy.array X: 評価用の画像データのリスト
+        :param numpy.array y: 評価用の画像に対する分類ラベルのリスト
+        '''
         score = model.evaluate(X, y)
         print('loss=', score[0])
         print('accuracy=', score[1])
         backend.clear_session()
 
     def predict_img_labels(self, filepath, model_file_name = config.CNN_MODEL_FILE):
+        '''
+        学習モデルを使い、指定されたファイルの画像の分類を行う。
+        :param str filepath: 分類対象の画像ファイルのパス
+        :param str model_file_name: 学習モデルのファイル名
+        '''
         file_name = model_file_name
         hdf5_file = config.CNN_FOLDER + file_name
         label_all = config.CATEGORIES_LABEL
@@ -457,10 +475,17 @@ if __name__ == "__main__":
 
     # 引数が2以下の場合は終了する。
     if arg_num <= 2:
+        print("パラメータが必要です")
+        print(" * prepare : 機械学習のための教師データ（画像ファイルと画像に対しての分類ラベル）を1つのファイル(拡張子：npy)にまとめて生成")
+        print(" * train : prepareで生成した教師データを使って学習モデルファイル(拡張子：hdf5)を生成")
+        print(" * predict <filepath>: trainで生成した学習モデルを使用して<filepath>の画像を分類した結果を表示")
+        print(" * predict2db : 学習モデルを使用し、実行日前日1日分のツイートに含まれる画像ファイルの分類を行いDB内のツイートに分類結果を付加")
+        print(" * hash : ハッシュによる類似画像チェックを行いDB内のツイートに結果を付加")
+        print(" * download : ツイートに含まれる画像をダウンロード")
         exit
 
     #ハッシュによる類似画像チェック
-    if sys.argv[1] == "hash":
+    elif sys.argv[1] == "hash":
         begin_datetime = datetime.datetime.now()
         avhash = AverageHash()
         nwutil = NetworkUtilities()

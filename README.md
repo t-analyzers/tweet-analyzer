@@ -102,6 +102,7 @@ Keras（深層学習用のラッパーライブラリ）は、requirements.txt�
 
 
 ### 実行方法
+#### tweet収集、レポート出力
 command.pyが実行用のスクリプトになっています。  
 引数にコマンド名を指定すると処理が開始されます。  
 
@@ -116,6 +117,8 @@ Excel形式のレポートを出力する場合：
 cd analyzer  
 python command.py e  
 ```
+#### 上記以外
+必要に応じて引数を設定し、それぞれのスクリプトを実行してください。（そのうちcommand.pyに統合します）
 
 ### 各スクリプトについて
 
@@ -150,10 +153,15 @@ DBから過去1周間以内のつぶやきを検索し、dataフォルダ以下�
 conf/sample_tweets.tsvを教師データとしています。
 
 #### svm_scorer_using_metadata.py
-サポートベクターマシンを使ってネガポジ判定を行います。
+サポートベクターマシンを使ってネガポジ判定を行います。対象ツイートは実行前日から7日分です。
 create_learning_data_using_metadata.pyで作成した教師データを使用します。
 接続先のMongoDBの情報などはconfig_svm_np.pyで設定します。
 なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（最終回： 機械学習によるテキストマイニング）](https://datumstudio.jp/backstage/662 "機械学習によるテキストマイニング")を参考に作成しました。
+
+実行に引数は不要です。
+```
+python svm_scorer_using_metadata.py
+```
 
 教師データのコレクションをエクスポートしたファイルは以下に格納しています：
 /out/tweets-metadata.jbos
@@ -163,9 +171,14 @@ mongorestore -drop -d twitter-archive -c tweets-metadata  ./tweets-metadata.bson
 ```
 
 #### create_learning_data_using_metadata.py
-metadata株式会社の「高精度ネガポジAPI」を使用してツイート本文のネガポジを判定し、教師データを作成します。
+[metadata株式会社の「高精度ネガポジAPI」](http://www.metadata.co.jp/koseido-negapoji-api.html)を使用してツイート本文のネガポジを判定し、教師データを作成します。対象ツイートは実行前日の1日分です。無料枠では1日100件までです。
 ツイート本文の取得先及び教師データの格納先はMongoDBです。
-APIキーやMongoDBの情報はconfig_metadata_api.pyで設定します。
+APIキー、実行件数、MongoDBの情報はconfig_metadata_api.pyで設定します。
+
+実行に引数は不要です。
+```
+python create_learning_data_using_metadata.py
+```
 
 #### feature_words_extractor.py
 archive.pyで取り込んだツイートをMeCabを使って形態素解析を行い名詞を抽出し、TF-IDFモデルで日別の特徴語を抽出します。
@@ -193,11 +206,29 @@ wordcloud_YYYYMMDD.png
 
 なお、ロジックは[【特別連載】 さぁ、自然言語処理を始めよう！（第2回： 単純集計によるテキストマイニング）](https://datumstudio.jp/backstage/643 "単純集計によるテキストマイニング")を参考に作成しました。
 
+引数を指定しない場合、特徴語抽出及び結果を全て出力します。
+```
+python feature_words_extractor.py
+```
+
+日別ツイートデータの生成のみが必要な場合は、以下のように引数を指定してください。
+```
+python feature_words_extractor.py tweets
+```
+
+
 #### image_analyzer.py
-画像を分析する機能を実装。引数を指定して機能を実行する。
-* hash：　実行日前日1日分のツイートから画像を取得し、予め特定フォルダに格納しておいた画像と類似している画像のツイートに {"hash_match": "(一致した画像ファイル名（拡張子なし）)"}を付加する。
-
-
+画像を分析する機能を実装。機械学習ではKeras(実行エンジンはTensorFlow)を使用。
+設定はconfig_image_analyzer.pyで行います。
+教師データ（画像ファイルと画像に対しての分類ラベル）は別途作成する必要があります。
+##### 機械学習
+* prepare :　機械学習のための教師データ（画像ファイルと画像に対しての分類ラベル）を1つのファイル(拡張子：npy)にまとめて生成する。画像ファイルの保存場所は"download"参照。分類ラベルは"screen_name","id","url","annotation"を持ち、"annotation"内に"labels"として0,1のリストを持つことを想定。
+* train :　prepareで生成した教師データを使って学習モデルファイル(拡張子：hdf5)を生成します。
+* predict <filepath> :　trainで生成した学習モデルを使用して<filepath>の画像を分類した結果を表示します。
+* predict2db :  設定ファイルに指定した学習モデル（複数指定可能）を使用し、実行日前日1日分のツイートに含まれる画像ファイルの分類を行い、ツイートに{"labels": [分類ラベルのリスト] }を付加します。
+##### その他
+* hash : ハッシュによる類似画像チェックを行います。実行日前日1日分のツイートから画像を取得し、予め特定フォルダに格納しておいた画像と類似している画像のツイートに {"hash_match": "(一致した画像ファイル名（拡張子なし）)"}を付加します。
+* download : 実行日前日1日分のツイートに含まれる画像ファイルのダウンロードを行います。("hash"では画像ダウンロードを行うため実行不要です。)保存先は、設定ファイルにて指定。その下に/screen_name/<ツイートのid>_<画像ファイル名>で保存します。
 
 ### ユニットテスト
 ユニットテストの実装には標準モジュールの[unittest](http://docs.python.jp/3/library/unittest.html)を使用しています。  
