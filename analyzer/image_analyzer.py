@@ -153,27 +153,16 @@ class CNNImageAnalyzer():
                 print("skip")
                 continue
 
-            # print(file_path)
             img = Image.open(file_path)
             img = img.convert("RGB") # カラーモードの変更
             img = img.resize((config.IMG_SIZE, config.IMG_SIZE)) # 画像サイズの変更
             data = np.asarray(img)
 
-            Y1 = [0 for i in range(len(config.ADULT_LABEL))]
-            Y2 = [0 for i in range(len(config.CATEGORIES_LABEL))]
+            label_list = [0 for i in range(len(config.CATEGORIES_LABEL))]
 
             ## annotation要素を含まなかった場合は以降の処理をスキップ
             annotation = l.get("annotation")
             if annotation == None: continue
-            ## adult要素を含まなかった場合は以降の処理をスキップ
-            adult_label = annotation.get("adult")
-            if adult_label == None: continue
-
-            for i, ad in enumerate(config.ADULT_LABEL):
-                if adult_label == ad:
-                    #Y1[i] = 1.0
-                    Y1[i] = 1
-                    break
 
             ## labels要素を含まなかった場合は以降の処理をスキップ
             label_annotations = annotation.get('labels')
@@ -182,36 +171,26 @@ class CNNImageAnalyzer():
             for label in label_annotations:
                 for i, cat in enumerate(config.CATEGORIES_LABEL):
                     if label == cat:
-                        #Y2[i] = 1.0
-                        Y2[i] = 1
+                        label_list[i] = 1
                         break
 
-            ## 正規化する
-            # sum_Y2 = sum(Y2)
-            # if sum_Y2 == 0: continue
-            # for i in range(0, len(Y2)):
-            #     Y2[i] = Y2[i]/sum_Y2
-
             X.append(data)
-            Y.append(Y2)
-            #Y.append(Y1+Y2)
+            Y.append(label_list)
 
             if is_train == False: continue
 
             #5度ずつの回転＋反転で学習データを増やす
             for ang in range(-20, 20, 5):
-                img2 = img.rotate(ang)
-                data = np.asarray(img2)
+                img_tmp = img.rotate(ang)
+                data = np.asarray(img_tmp)
                 X.append(data)
-                Y.append(Y2)
-                #Y.append(Y1+Y2)
+                Y.append(label_list)
 
                 # 反転する
-                img2 = img2.transpose(Image.FLIP_LEFT_RIGHT)
-                data = np.asarray(img2)
+                img_tmp = img_tmp.transpose(Image.FLIP_LEFT_RIGHT)
+                data = np.asarray(img_tmp)
                 X.append(data)
-                Y.append(Y2)
-                #Y.append(Y1+Y2)
+                Y.append(label_list)
 
         print("画像データ数:" + str(len(X)))
         X = np.array(X)
@@ -251,9 +230,10 @@ class CNNImageAnalyzer():
         model.add(Dropout(0.5))
 
         model.add(Dense(config.LABEL_NUM))
-        model.add(Activation('softmax'))
+        # multi-labelの分類にはsigmoidが良いらしい
+        # https://github.com/odanado/Indeed-ML/issues/2
+        model.add(Activation('sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-        # model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         return model
 
     # モデルを訓練する
@@ -266,6 +246,8 @@ class CNNImageAnalyzer():
         # モデルを保存する
         model.save_weights(hdf5_file)
 
+        backend.clear_session()
+
         return model
 
     # モデルを評価する
@@ -273,6 +255,7 @@ class CNNImageAnalyzer():
         score = model.evaluate(X, y)
         print('loss=', score[0])
         print('accuracy=', score[1])
+        backend.clear_session()
 
     def predict_img_labels(self, filepath, model_file_name = config.CNN_MODEL_FILE):
         file_name = model_file_name
@@ -301,6 +284,7 @@ class CNNImageAnalyzer():
             if score > 0.0:
                 print(label_all[i] + ": " + str(score))
                 values[label_all[i]] = score
+
         backend.clear_session()
         
         return values
@@ -483,7 +467,6 @@ if __name__ == "__main__":
         dao = DatabaseUtilities()
 
         img_url_list = dao.get_img_url_list(start_datetime, end_datetime)
-        #print(img_url_list)
 
         for img_url in img_url_list:
             url = img_url["url"]
@@ -547,10 +530,6 @@ if __name__ == "__main__":
     elif sys.argv[1] == "train":
         begin_datetime = datetime.datetime.now()
 
-        y_label = None
-        if arg_num == 3:
-            y_label = sys.argv[2]
-
         X_train, X_test, y_train, y_test = np.load(config.CNN_FOLDER + config.LEARNING_PACK_FILE)
         # データを正規化する
         X_train = X_train.astype("float") / 256
@@ -598,8 +577,6 @@ if __name__ == "__main__":
                 img_urls.append(url)
                 img_filepaths.append(folder_path + filename)
         
-        print("img_urls: " + str(len(img_urls)))
-        print("img_filepaths: " + str(len(img_filepaths)))
         cnn = CNNImageAnalyzer()
 
         for i, img_url in enumerate(img_urls):
@@ -614,7 +591,7 @@ if __name__ == "__main__":
             search_condition['created_datetime'] = {'$gte': start_datetime, '$lte': end_datetime}
             search_condition['entities.media.media_url'] = img_url
             result = dao.update_many(config.DB_TWEETS_COLLECTION_NAME, search_condition, {'labels': labels})
-            print(img_url + ": update count " + str(result.matched_count))
+            print("*url: " + img_url + " *label: " + str(labels) + " *update count:" + str(result.matched_count))
 
         finish_datetime = datetime.datetime.now()
         print("begin: " + str(begin_datetime))
